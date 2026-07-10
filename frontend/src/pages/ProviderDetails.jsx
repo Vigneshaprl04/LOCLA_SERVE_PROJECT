@@ -290,7 +290,7 @@ const ProviderDetails = () => {
                     onChange={handleChange}
                     style={{ width: 16, height: 16, cursor: 'pointer' }}
                   />
-                  <span>Emergency Booking (1.5x Rate)</span>
+                  <span>Emergency / Urgent Booking (Provider will quote accordingly)</span>
                 </label>
               </div>
 

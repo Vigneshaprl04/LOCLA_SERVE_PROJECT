@@ -65,12 +65,6 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    let estimatedPrice = Number(categories[0].base_price);
-
-    if (emergency_booking) {
-      estimatedPrice *= 1.5;
-    }
-
     const [result] = await db.query(
       `INSERT INTO bookings (
         user_id,
@@ -95,7 +89,7 @@ exports.createBooking = async (req, res) => {
         latitude || null,
         longitude || null,
         emergency_booking,
-        estimatedPrice
+        null
       ]
     );
 
@@ -103,7 +97,7 @@ exports.createBooking = async (req, res) => {
       success: true,
       message: "Booking created successfully",
       bookingId: result.insertId,
-      estimatedPrice
+      estimatedPrice: null
     });
   } catch (error) {
     console.error("Create Booking Error:", error);
@@ -197,7 +191,7 @@ exports.updateBookingStatus = async (req, res) => {
     const { status } = req.body;
 
     const allowedStatuses = [
-      "accepted",
+      "quoted",
       "rejected",
       "on_the_way",
       "work_started",
@@ -246,7 +240,7 @@ exports.updateBookingStatus = async (req, res) => {
     const currentStatus = bookings[0].booking_status;
 
     const validTransitions = {
-      pending: ["accepted", "rejected"],
+      pending: ["quoted", "rejected"],
       accepted: ["on_the_way"],
       on_the_way: ["work_started"],
       work_started: ["completed"]
@@ -262,20 +256,43 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
-    await db.query(
-      `UPDATE bookings
-       SET booking_status = ?
-       WHERE id = ?`,
-      [status, bookingId]
-    );
+    let estimatedPrice = null;
+    if (status === "quoted") {
+      estimatedPrice = Number(req.body.estimated_price);
+      if (isNaN(estimatedPrice) || estimatedPrice <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Estimated price must be a valid positive number greater than 0"
+        });
+      }
+
+      await db.query(
+        `UPDATE bookings
+         SET booking_status = ?, estimated_price = ?
+         WHERE id = ?`,
+        [status, estimatedPrice, bookingId]
+      );
+    } else {
+      await db.query(
+        `UPDATE bookings
+         SET booking_status = ?
+         WHERE id = ?`,
+        [status, bookingId]
+      );
+    }
 
     const io = req.app.get("io");
+
+    const title = status === "quoted" ? "Booking Quoted" : "Booking Status Updated";
+    const notifMessage = status === "quoted"
+      ? `Provider submitted an estimated quote of ₹${estimatedPrice} for booking #${bookingId}`
+      : `Your booking #${bookingId} status is now ${status}`;
 
     await createNotification({
       io,
       userId: bookings[0].user_id,
-      title: "Booking Status Updated",
-      message: `Your booking #${bookingId} status is now ${status}`,
+      title,
+      message: notifMessage,
       type: "booking_status"
     });
 
@@ -286,6 +303,95 @@ exports.updateBookingStatus = async (req, res) => {
   } catch (error) {
     console.error("Update Booking Status Error:", error);
 
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+exports.updateCustomerBookingStatus = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ["accepted", "quote_rejected"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Only accept or reject quote are allowed."
+      });
+    }
+
+    // Verify booking belongs to logged-in customer
+    const [bookings] = await db.query(
+      `SELECT
+         b.id,
+         b.booking_status,
+         b.provider_id,
+         b.estimated_price
+       FROM bookings b
+       WHERE b.id = ?
+       AND b.user_id = ?`,
+      [bookingId, req.user.id]
+    );
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or not owned by you"
+      });
+    }
+
+    const booking = bookings[0];
+
+    // Verify current status is "quoted"
+    if (booking.booking_status !== "quoted") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot perform action. Current status is ${booking.booking_status}, not quoted.`
+      });
+    }
+
+    // Update status
+    await db.query(
+      `UPDATE bookings
+       SET booking_status = ?
+       WHERE id = ?`,
+      [status, bookingId]
+    );
+
+    // Get the provider's user_id to send a notification
+    const [providerRows] = await db.query(
+      "SELECT user_id FROM providers WHERE id = ?",
+      [booking.provider_id]
+    );
+    const providerUserId = providerRows[0]?.user_id;
+
+    const io = req.app.get("io");
+
+    if (providerUserId) {
+      const title = status === "accepted" ? "Quote Accepted" : "Quote Rejected";
+      const message = status === "accepted"
+        ? `Customer accepted your quote of ₹${booking.estimated_price} for booking #${bookingId}`
+        : `Customer rejected your quote for booking #${bookingId}`;
+
+      await createNotification({
+        io,
+        userId: providerUserId,
+        title,
+        message,
+        type: "booking_status"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Booking quote was successfully ${status === 'accepted' ? 'accepted' : 'rejected'}`
+    });
+  } catch (error) {
+    console.error("Update Customer Booking Status Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"

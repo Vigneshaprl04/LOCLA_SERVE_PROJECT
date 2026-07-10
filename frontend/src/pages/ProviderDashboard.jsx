@@ -14,6 +14,7 @@ const ProviderDashboard = () => {
   const [updatingBookingId, setUpdatingBookingId] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [prices, setPrices] = useState({});
 
   // Load dashboard data: bookings & current availability
   useEffect(() => {
@@ -80,6 +81,33 @@ const ProviderDashboard = () => {
     }
   };
 
+  const handleSendQuote = async (bookingId, price) => {
+    try {
+      const priceNum = Number(price);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        setError('Please enter a valid price greater than 0.');
+        return;
+      }
+      setUpdatingBookingId(bookingId);
+      setError('');
+      setMessage('');
+
+      await api.patch(`/bookings/${bookingId}/status`, {
+        status: 'quoted',
+        estimated_price: priceNum
+      });
+
+      setMessage(`Quote of ₹${priceNum} sent for Booking #${bookingId}.`);
+      
+      const bookingsRes = await api.get('/bookings/provider');
+      setBookings(bookingsRes.data.bookings || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to send quote');
+    } finally {
+      setUpdatingBookingId(null);
+    }
+  };
+
   const pendingCount = bookings.filter(
     (booking) => booking.booking_status === 'pending'
   ).length;
@@ -99,26 +127,46 @@ const ProviderDashboard = () => {
     switch (booking.booking_status) {
       case 'pending':
         return (
-          <>
-            <button
-              disabled={disabled}
-              className="btn-primary"
-              style={{ padding: '8px 16px', fontSize: 13 }}
-              onClick={() => updateBookingStatus(bookingId, 'accepted')}
-            >
-              Accept Order
-            </button>
-
-            <button
-              disabled={disabled}
-              className="btn-danger"
-              style={{ padding: '8px 16px', fontSize: 13 }}
-              onClick={() => updateBookingStatus(bookingId, 'rejected')}
-            >
-              Reject Order
-            </button>
-          </>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: '300px' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Estimated Price (₹) *</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="Enter price"
+                className="form-control"
+                style={{ padding: '6px 12px', fontSize: 13, height: '36px' }}
+                value={prices[bookingId] || ''}
+                onChange={(e) => setPrices({ ...prices, [bookingId]: e.target.value })}
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                disabled={disabled || !prices[bookingId] || Number(prices[bookingId]) <= 0}
+                className="btn-primary"
+                style={{ padding: '8px 16px', fontSize: 13, flex: 1 }}
+                onClick={() => handleSendQuote(bookingId, prices[bookingId])}
+              >
+                Send Quote
+              </button>
+              <button
+                disabled={disabled}
+                className="btn-danger"
+                style={{ padding: '8px 16px', fontSize: 13, flex: 1 }}
+                onClick={() => updateBookingStatus(bookingId, 'rejected')}
+              >
+                Reject Order
+              </button>
+            </div>
+          </div>
         );
+
+      case 'quoted':
+        return <span className="badge badge-warning" style={{ fontSize: 11 }}>Quote Sent (Waiting for Customer)</span>;
+
+      case 'quote_rejected':
+        return <span className="badge badge-danger" style={{ fontSize: 11 }}>Quote Rejected by Customer</span>;
 
       case 'accepted':
         return (
@@ -289,8 +337,8 @@ const ProviderDashboard = () => {
                       {booking.category_name}
                     </span>
                     <span className={`badge ${
-                      booking.booking_status === 'pending' ? 'badge-warning' :
-                      booking.booking_status === 'rejected' || booking.booking_status === 'cancelled' ? 'badge-danger' :
+                      booking.booking_status === 'pending' || booking.booking_status === 'quoted' ? 'badge-warning' :
+                      booking.booking_status === 'rejected' || booking.booking_status === 'cancelled' || booking.booking_status === 'quote_rejected' ? 'badge-danger' :
                       'badge-success'
                     }`}>
                       {booking.booking_status.replace('_', ' ').toUpperCase()}
@@ -316,7 +364,7 @@ const ProviderDashboard = () => {
                       {booking.preferred_date ? new Date(booking.preferred_date).toLocaleString() : 'Not specified'}
                     </p>
                     <p style={{ fontSize: 15, fontWeight: 800, margin: '4px 0 0 0', color: 'var(--primary)' }}>
-                      ₹{booking.estimated_price}
+                      {booking.estimated_price ? `₹${booking.estimated_price}` : 'Quote Pending'}
                     </p>
                   </div>
                 </div>

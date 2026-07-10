@@ -4,7 +4,8 @@ const {
   createBooking,
   getMyBookings,
   getProviderBookings,
-  updateBookingStatus
+  updateBookingStatus,
+  updateCustomerBookingStatus
 } = require("../controllers/bookingController");
 
 const {
@@ -40,6 +41,13 @@ router.patch(
   protect,
   authorize("provider"),
   updateBookingStatus
+);
+
+router.patch(
+  "/:bookingId/customer-status",
+  protect,
+  authorize("user"),
+  updateCustomerBookingStatus
 );
 
 module.exports = router;

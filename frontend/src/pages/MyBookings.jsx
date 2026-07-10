@@ -28,9 +28,23 @@ const MyBookings = () => {
     fetchBookings();
   }, []);
 
+  const handleUpdateQuoteStatus = async (bookingId, status) => {
+    try {
+      setError('');
+      setLoading(true);
+      await api.patch(`/bookings/${bookingId}/customer-status`, { status });
+      await fetchBookings();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to update quote status');
+      setLoading(false);
+    }
+  };
+
   const getNextStatusText = (status) => {
     const statusText = {
       pending: 'Pending Partner Review',
+      quoted: 'Quote Received',
+      quote_rejected: 'Quote Rejected by You',
       accepted: 'Partner Accepted Booking',
       rejected: 'Booking Rejected',
       on_the_way: 'Partner is On the Way',
@@ -45,11 +59,13 @@ const MyBookings = () => {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'pending': return 'badge-warning';
+      case 'quoted': return 'badge-warning';
       case 'accepted': return 'badge-accent';
       case 'on_the_way':
       case 'work_started': return 'badge-accent';
       case 'completed': return 'badge-success';
       case 'rejected':
+      case 'quote_rejected':
       case 'cancelled': return 'badge-danger';
       default: return 'badge-success';
     }
@@ -156,12 +172,26 @@ const MyBookings = () => {
                 <div>
                   <span className="booking-info-label">Estimated Bill</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
-                    <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-                      ₹{booking.estimated_price}
-                    </span>
+                    {booking.booking_status === 'pending' ? (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Waiting for provider response
+                      </span>
+                    ) : booking.booking_status === 'quote_rejected' ? (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Quote Rejected
+                      </span>
+                    ) : booking.estimated_price ? (
+                      <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+                        ₹{booking.estimated_price}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Waiting for quote
+                      </span>
+                    )}
                     {booking.emergency_booking === 1 && (
                       <span className="badge badge-danger" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
-                        Emergency 1.5x
+                        Emergency
                       </span>
                     )}
                   </div>
@@ -183,6 +213,25 @@ const MyBookings = () => {
                   >
                     <FaComments /> Chat
                   </button>
+
+                  {booking.booking_status === 'quoted' && (
+                    <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 8 }}>
+                      <button
+                        onClick={() => handleUpdateQuoteStatus(booking.id, 'accepted')}
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+                      >
+                        Accept Quote
+                      </button>
+                      <button
+                        onClick={() => handleUpdateQuoteStatus(booking.id, 'quote_rejected')}
+                        className="btn-danger"
+                        style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+                      >
+                        Reject Quote
+                      </button>
+                    </div>
+                  )}
 
                   {canPay(booking) && (
                     <button
