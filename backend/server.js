@@ -142,6 +142,30 @@ app.get("/api/debug-db", async (req, res) => {
     }
 });
 
+app.post("/api/debug-booking", async (req, res) => {
+    try {
+        const { provider_id, category_id, service_description, service_address, preferred_date } = req.body;
+        const [providers] = await db.query(
+          "SELECT id, category_id, availability_status, verification_status FROM providers WHERE id = ?",
+          [provider_id]
+        );
+        const provider = providers[0];
+        const [categories] = await db.query(
+          "SELECT base_price FROM service_categories WHERE id = ?",
+          [category_id]
+        );
+        const [result] = await db.query(
+          `INSERT INTO bookings (
+            user_id, provider_id, category_id, service_description, service_address, preferred_date, emergency_booking
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [1, provider_id, category_id, service_description, service_address, preferred_date, 0]
+        );
+        res.json({ success: true, bookingId: result.insertId });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    }
+});
+
 async function ensureMessagesTableExists() {
     try {
         await db.query(`
