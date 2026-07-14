@@ -33,6 +33,20 @@ exports.register = async (req, res) => {
       });
     }
 
+    if (phone) {
+      const [existingPhone] = await db.query(
+        "SELECT id FROM users WHERE phone = ?",
+        [phone]
+      );
+
+      if (existingPhone.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: "Phone number already registered",
+        });
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await db.query(
@@ -56,6 +70,19 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("Register Error:", error);
+
+    if (error.code === "ER_DUP_ENTRY") {
+      let message = "Email or phone number already registered";
+      if (error.sqlMessage && error.sqlMessage.toLowerCase().includes("email")) {
+        message = "Email already registered";
+      } else if (error.sqlMessage && error.sqlMessage.toLowerCase().includes("phone")) {
+        message = "Phone number already registered";
+      }
+      return res.status(409).json({
+        success: false,
+        message: message,
+      });
+    }
 
     return res.status(500).json({
       success: false,

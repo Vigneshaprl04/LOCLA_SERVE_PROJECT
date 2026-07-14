@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ChatPage from './pages/ChatPage';
 import UserProfile from './pages/UserProfile';
 import ProviderProfile from './pages/ProviderProfile';
+import AIServiceAssistant from './pages/AIServiceAssistant';
 
 import './App.css';
 
@@ -70,6 +71,15 @@ function App() {
           element={
             <RoleRoute allowedRoles={['user']}>
               <UserProfile />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/user/assistant"
+          element={
+            <RoleRoute allowedRoles={['user']}>
+              <AIServiceAssistant />
             </RoleRoute>
           }
         />

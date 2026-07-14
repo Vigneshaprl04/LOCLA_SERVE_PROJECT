@@ -254,6 +254,8 @@ exports.searchProviders = async (req, res) => {
   }
 };
 
+const { findProviders } = require("../utils/nearbySearchHelper");
+
 exports.getNearbyProviders = async (req, res) => {
   try {
     const {
@@ -290,74 +292,12 @@ exports.getNearbyProviders = async (req, res) => {
       });
     }
 
-    let sql = `
-      SELECT
-        p.id AS provider_id,
-        p.user_id,
-        u.name,
-        u.phone,
-        p.category_id,
-        sc.name AS category_name,
-        p.experience,
-        p.description,
-        p.working_area,
-        p.city,
-        p.pincode,
-        p.latitude,
-        p.longitude,
-        p.availability_status,
-        p.average_rating,
-
-        (
-          6371 * ACOS(
-            LEAST(
-              1,
-              GREATEST(
-                -1,
-                COS(RADIANS(?))
-                * COS(RADIANS(p.latitude))
-                * COS(
-                    RADIANS(p.longitude)
-                    - RADIANS(?)
-                  )
-                + SIN(RADIANS(?))
-                * SIN(RADIANS(p.latitude))
-              )
-            )
-          )
-        ) AS distance_km
-
-      FROM providers p
-
-      JOIN users u
-        ON p.user_id = u.id
-
-      LEFT JOIN service_categories sc
-        ON p.category_id = sc.id
-
-      WHERE p.verification_status = 'verified'
-        AND p.availability_status = TRUE
-        AND u.is_active = TRUE
-        AND p.latitude IS NOT NULL
-        AND p.longitude IS NOT NULL
-    `;
-
-    const values = [lat, lng, lat];
-
-    if (category_id) {
-      sql += ` AND p.category_id = ?`;
-      values.push(Number(category_id));
-    }
-
-    sql += `
-      HAVING distance_km <= ?
-      ORDER BY distance_km ASC, p.average_rating DESC
-      LIMIT 50
-    `;
-
-    values.push(searchRadius);
-
-    const [providers] = await db.query(sql, values);
+    const providers = await findProviders({
+      categoryId: category_id,
+      latitude: lat,
+      longitude: lng,
+      radius: searchRadius
+    });
 
     res.json({
       success: true,

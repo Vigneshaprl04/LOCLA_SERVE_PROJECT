@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaUserCog, FaBriefcase, FaCompass } from "react-icons/fa";
+import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaUserCog, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
 
 const CATEGORIES = [
   { id: "", name: "All Services" },
@@ -135,9 +135,31 @@ function UserHome() {
         <h1 style={{ color: '#ffffff', fontSize: '2.5rem', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em' }}>
           Local Services, Instantly Verified.
         </h1>
-        <p style={{ color: 'var(--primary-light)', fontSize: '1.05rem', margin: 0, maxWidth: 640 }}>
+        <p style={{ color: 'var(--primary-light)', fontSize: '1.05rem', margin: '0 0 20px 0', maxWidth: 640 }}>
           Find, chat with, and book certified local service professionals in your neighborhood within minutes.
         </p>
+        <button 
+          onClick={() => navigate('/user/assistant')} 
+          className="btn-accent" 
+          style={{ 
+            backgroundColor: '#06b6d4', 
+            color: '#ffffff', 
+            border: "none",
+            padding: '10px 20px', 
+            borderRadius: 'var(--radius-sm)', 
+            fontWeight: 'bold', 
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(6, 182, 212, 0.4)',
+            transition: 'transform 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}
+          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+        >
+          <FaRobot /> Try AI Service Assistant
+        </button>
       </div>
 
       {/* Search Filter Controls Card */}
