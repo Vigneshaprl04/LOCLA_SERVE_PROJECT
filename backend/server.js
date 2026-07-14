@@ -119,6 +119,15 @@ app.get("/", async (req, res) => {
     });
 });
 
+app.get("/api/debug-db", async (req, res) => {
+    try {
+        const [bookingsCols] = await db.query("DESCRIBE bookings");
+        res.json({ success: true, bookingsCols });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 async function ensureMessagesTableExists() {
     try {
         await db.query(`
