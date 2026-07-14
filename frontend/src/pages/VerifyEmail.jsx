@@ -26,7 +26,7 @@ const VerifyEmail = () => {
       }
 
       try {
-        await api.get(`/auth/verify-email?token=${token}`);
+        await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
         setSuccess(true);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to verify email. The link may have expired or is invalid.');

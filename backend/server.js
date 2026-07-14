@@ -25,10 +25,33 @@ app.set("trust proxy", 1);
 
 const server = http.createServer(app);
 
+const allowedOrigins = [
+    "http://localhost:5173",
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true
+};
+
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        credentials: true
     }
 });
 
@@ -75,7 +98,7 @@ io.use(async (socket, next) => {
 app.set("io", io);
 
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "10kb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/providers", providerRoutes);
@@ -128,6 +151,12 @@ async function connectDB() {
         await runMigrations();
         
         await ensureMessagesTableExists();
+
+        // Start server listening only after DB and migrations are ready
+        const PORT = process.env.PORT || 5000;
+        server.listen(PORT, () => {
+            console.log(`Server running on ${PORT}`);
+        });
     } catch (err) {
         console.error("❌ DB/Migration Error during startup:", err.message);
         process.exit(1); // Stop application from running with incorrect schema
@@ -288,8 +317,3 @@ io.on("connection", (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
-
-server.listen(PORT, () => {
-    console.log(`Server running on ${PORT}`);
-});

@@ -5,20 +5,33 @@ import { useAuth } from '../AuthContext';
 import api from '../api';
 import NotificationBell from '../components/NotificationBell';
 
-const CATEGORIES = [
-  { id: 1, name: 'Electrician' },
-  { id: 2, name: 'Plumber' },
-  { id: 3, name: 'Mechanic' },
-  { id: 4, name: 'Carpenter' },
-  { id: 5, name: 'Painter' },
-  { id: 6, name: 'AC Repair' },
-  { id: 7, name: 'Appliance Repair' },
-  { id: 8, name: 'Cleaning Service' }
-];
-
 const ProviderProfile = () => {
   const { user, updateUserContext } = useAuth();
   const navigate = useNavigate();
+
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await api.get('/providers/categories');
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        console.error('Failed to fetch categories in ProviderProfile:', err);
+        setCategories([
+          { id: 1, name: 'Electrician' },
+          { id: 2, name: 'Plumber' },
+          { id: 3, name: 'Mechanic' },
+          { id: 4, name: 'Carpenter' },
+          { id: 5, name: 'Painter' },
+          { id: 6, name: 'AC Repair' },
+          { id: 7, name: 'Appliance Repair' },
+          { id: 8, name: 'Cleaning Service' }
+        ]);
+      }
+    };
+    fetchCats();
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -322,7 +335,7 @@ const ProviderProfile = () => {
                   className="form-control"
                 >
                   <option value="">Select Category</option>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>

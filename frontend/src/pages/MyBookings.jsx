@@ -10,6 +10,19 @@ const MyBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Review Modal States
+  const [reviewBookingId, setReviewBookingId] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState('');
+
+  // Complaint Modal States
+  const [complaintBookingId, setComplaintBookingId] = useState(null);
+  const [complaintText, setComplaintText] = useState('');
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [complaintSuccess, setComplaintSuccess] = useState('');
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -21,6 +34,62 @@ const MyBookings = () => {
       setError(err.response?.data?.message || 'Unable to fetch bookings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!rating || rating < 1 || rating > 5) {
+      setError('Please provide a rating between 1 and 5');
+      return;
+    }
+    try {
+      setReviewLoading(true);
+      setError('');
+      setReviewSuccess('');
+      const res = await api.post('/reviews', {
+        booking_id: reviewBookingId,
+        rating: Number(rating),
+        review_text: reviewText
+      });
+      setReviewSuccess(res.data.message || 'Review submitted successfully!');
+      setReviewText('');
+      setRating(5);
+      setTimeout(() => {
+        setReviewBookingId(null);
+        setReviewSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to submit review');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleComplaintSubmit = async (e) => {
+    e.preventDefault();
+    if (!complaintText.trim()) {
+      setError('Please describe your dispute details');
+      return;
+    }
+    try {
+      setComplaintLoading(true);
+      setError('');
+      setComplaintSuccess('');
+      const res = await api.post('/complaints', {
+        booking_id: complaintBookingId,
+        complaint_description: complaintText
+      });
+      setComplaintSuccess(res.data.message || 'Dispute submitted successfully!');
+      setComplaintText('');
+      setTimeout(() => {
+        setComplaintBookingId(null);
+        setComplaintSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to submit dispute');
+    } finally {
+      setComplaintLoading(false);
     }
   };
 
@@ -135,7 +204,7 @@ const MyBookings = () => {
                     {getNextStatusText(booking.booking_status)}
                   </span>
                   <span className={`badge ${booking.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>
-                    Payment: {booking.payment_status.toUpperCase()}
+                    Payment: {(booking.payment_status || 'pending').toUpperCase()}
                   </span>
                 </div>
                 
@@ -246,7 +315,7 @@ const MyBookings = () => {
                   {booking.booking_status === 'completed' && (
                     <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
                       <button
-                        onClick={() => navigate(`/review/${booking.id}`)}
+                        onClick={() => setReviewBookingId(booking.id)}
                         className="btn-outline"
                         style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--warning)', color: 'var(--warning)' }}
                       >
@@ -254,7 +323,7 @@ const MyBookings = () => {
                       </button>
 
                       <button
-                        onClick={() => navigate(`/complaint/${booking.id}`)}
+                        onClick={() => setComplaintBookingId(booking.id)}
                         className="btn-outline"
                         style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--error)', color: 'var(--error)' }}
                       >
@@ -267,6 +336,155 @@ const MyBookings = () => {
 
             </article>
           ))}
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewBookingId && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: 16
+        }}>
+          <div className="card animate-fade-up" style={{ width: '100%', maxWidth: 450, padding: 24, textAlign: 'left' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FaStar style={{ color: 'var(--warning)' }} /> Share Your Feedback
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+              Rate your experience for booking #{reviewBookingId} to help others find quality help.
+            </p>
+            {reviewSuccess ? (
+              <div className="alert alert-success" style={{ marginBottom: 0 }}>
+                {reviewSuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                    Rating Stars (1-5)
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        type="button"
+                        key={star}
+                        onClick={() => setRating(star)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontSize: '1.75rem', color: star <= rating ? 'var(--warning)' : '#e4e5e9',
+                          padding: 0
+                        }}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="reviewText" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                    Comments / Feedback (min 10 chars)
+                  </label>
+                  <textarea
+                    id="reviewText"
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="Write details of the repair or service quality..."
+                    rows={4}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 8,
+                      border: '1px solid var(--border-color)', background: 'var(--bg-main)',
+                      color: 'var(--text-main)', fontSize: 13, resize: 'none', boxSizing: 'border-box'
+                    }}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setReviewBookingId(null)}
+                    className="btn-outline"
+                    style={{ flex: 1, padding: '10px 0' }}
+                    disabled={reviewLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ flex: 1, padding: '10px 0' }}
+                    disabled={reviewLoading || reviewText.trim().length < 10}
+                  >
+                    {reviewLoading ? 'Submitting…' : 'Submit Review'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Complaint Modal */}
+      {complaintBookingId && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: 16
+        }}>
+          <div className="card animate-fade-up" style={{ width: '100%', maxWidth: 450, padding: 24, textAlign: 'left' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <FaExclamationCircle style={{ color: 'var(--error)' }} /> File a Service Dispute
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+              Let admin support review booking #{complaintBookingId} for billing, behavior or scheduling issues.
+            </p>
+            {complaintSuccess ? (
+              <div className="alert alert-success" style={{ marginBottom: 0 }}>
+                {complaintSuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleComplaintSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label htmlFor="complaintText" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                    Describe your issue / complaint details
+                  </label>
+                  <textarea
+                    id="complaintText"
+                    value={complaintText}
+                    onChange={(e) => setComplaintText(e.target.value)}
+                    placeholder="Tell us what went wrong so our admin support team can investigate..."
+                    rows={4}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 8,
+                      border: '1px solid var(--border-color)', background: 'var(--bg-main)',
+                      color: 'var(--text-main)', fontSize: 13, resize: 'none', boxSizing: 'border-box'
+                    }}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setComplaintBookingId(null)}
+                    className="btn-outline"
+                    style={{ flex: 1, padding: '10px 0' }}
+                    disabled={complaintLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    style={{ flex: 1, padding: '10px 0', background: 'var(--error)', borderColor: 'var(--error)' }}
+                    disabled={complaintLoading || !complaintText.trim()}
+                  >
+                    {complaintLoading ? 'Submitting…' : 'Submit Dispute'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
 

@@ -6,7 +6,8 @@ const {
   searchProviders,
   getNearbyProviders,
   getProviderById,
-  getProfile
+  getProfile,
+  getCategories
 } = require("../controllers/providerController");
 
 const {
@@ -30,6 +31,11 @@ router.get(
   protect,
   authorize("provider"),
   getProfile
+);
+
+router.get(
+  "/categories",
+  getCategories
 );
 
 router.get(

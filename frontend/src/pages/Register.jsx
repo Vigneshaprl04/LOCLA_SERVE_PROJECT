@@ -1,21 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller, FaBriefcase, FaMapMarkerAlt } from 'react-icons/fa';
 
-const categories = [
-  { id: 1, name: 'Electrician' },
-  { id: 2, name: 'Plumber' },
-  { id: 3, name: 'Mechanic' },
-  { id: 4, name: 'Carpenter' },
-  { id: 5, name: 'Painter' },
-  { id: 6, name: 'AC Repair' },
-  { id: 7, name: 'Appliance Repair' },
-  { id: 8, name: 'Cleaning Service' },
-];
-
 const Register = () => {
+  const [categories, setCategories] = useState([]);
+  
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -36,7 +27,29 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { register, login } = useAuth();
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/providers/categories');
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        console.error('Failed to load dynamic categories:', err);
+        setCategories([
+          { id: 1, name: 'Electrician' },
+          { id: 2, name: 'Plumber' },
+          { id: 3, name: 'Mechanic' },
+          { id: 4, name: 'Carpenter' },
+          { id: 5, name: 'Painter' },
+          { id: 6, name: 'AC Repair' },
+          { id: 7, name: 'Appliance Repair' },
+          { id: 8, name: 'Cleaning Service' },
+        ]);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const { register, login, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -87,8 +100,7 @@ const Register = () => {
           pincode: form.pincode,
         });
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        logout();
 
         setSuccess('Partner registration completed. Admin review is pending.');
       } else {

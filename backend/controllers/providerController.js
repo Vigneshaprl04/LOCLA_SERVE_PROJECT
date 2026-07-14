@@ -170,7 +170,7 @@ exports.updateAvailability = async (req, res) => {
       });
     }
 
-    const isOnline = !!availability_status;
+    const isOnline = availability_status === true || availability_status === "true" || availability_status === 1 || availability_status === "1";
 
     if (isOnline) {
       if (latitude === undefined || longitude === undefined) {
@@ -383,6 +383,24 @@ exports.getNearbyProviders = async (req, res) => {
   } catch (error) {
     console.error("Nearby Provider Search Error:", error);
 
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+exports.getCategories = async (req, res) => {
+  try {
+    const [categories] = await db.query(
+      "SELECT id, name, description, base_price FROM service_categories ORDER BY id"
+    );
+    res.json({
+      success: true,
+      categories
+    });
+  } catch (error) {
+    console.error("Get Categories Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"

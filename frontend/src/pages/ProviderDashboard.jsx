@@ -149,7 +149,7 @@ const ProviderDashboard = () => {
         status,
       });
 
-      setMessage(`Booking #${bookingId} successfully updated to ${status.replace('_', ' ')}.`);
+      setMessage(`Booking #${bookingId} successfully updated to ${status.replace(/_/g, ' ')}.`);
       
       const bookingsRes = await api.get('/bookings/provider');
       setBookings(bookingsRes.data.bookings || []);
@@ -482,7 +482,7 @@ const ProviderDashboard = () => {
                       booking.booking_status === 'rejected' || booking.booking_status === 'cancelled' || booking.booking_status === 'quote_rejected' ? 'badge-danger' :
                       'badge-success'
                     }`}>
-                      {booking.booking_status.replace('_', ' ').toUpperCase()}
+                      {booking.booking_status.replace(/_/g, ' ').toUpperCase()}
                     </span>
                   </div>
                 </div>

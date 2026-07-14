@@ -3,18 +3,6 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaUserCog, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
 
-const CATEGORIES = [
-  { id: "", name: "All Services" },
-  { id: "1", name: "Electrician" },
-  { id: "2", name: "Plumber" },
-  { id: "3", name: "Mechanic" },
-  { id: "4", name: "Carpenter" },
-  { id: "5", name: "Painter" },
-  { id: "6", name: "AC Repair" },
-  { id: "7", name: "Appliance Repair" },
-  { id: "8", name: "Cleaning Service" }
-];
-
 const getCategoryIcon = (name) => {
   switch (name) {
     case "Electrician": return <FaBolt />;
@@ -32,6 +20,7 @@ const getCategoryIcon = (name) => {
 function UserHome() {
   const navigate = useNavigate();
 
+  const [categories, setCategories] = useState([{ id: "", name: "All Services" }]);
   const [providers, setProviders] = useState([]);
   const [location, setLocation] = useState(null);
   const [radius, setRadius] = useState(20);
@@ -109,6 +98,32 @@ function UserHome() {
   };
 
   useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await api.get('/providers/categories');
+        if (res.data.categories) {
+          setCategories([
+            { id: "", name: "All Services" },
+            ...res.data.categories
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load categories in UserHome:', err);
+        // Safe fallback matching existing DB schema
+        setCategories([
+          { id: "", name: "All Services" },
+          { id: "1", name: "Electrician" },
+          { id: "2", name: "Plumber" },
+          { id: "3", name: "Mechanic" },
+          { id: "4", name: "Carpenter" },
+          { id: "5", name: "Painter" },
+          { id: "6", name: "AC Repair" },
+          { id: "7", name: "Appliance Repair" },
+          { id: "8", name: "Cleaning Service" }
+        ]);
+      }
+    };
+    fetchCats();
     getLocation();
   }, []);
 
@@ -221,7 +236,7 @@ function UserHome() {
       </div>
 
       <div className="category-grid animate-fade-up" style={{ animationDelay: '200ms', marginBottom: 30 }}>
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <div
             key={cat.id}
             className={`category-card ${categoryId === cat.id ? 'active' : ''}`}
