@@ -1,19 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import api from '../api';
+import { FaEnvelope, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
 
-const Login = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
+const ForgotPassword = () => {
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
-  const location = useLocation();
-  const [message, setMessage] = useState(location.state?.message || '');
-  
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,22 +16,11 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const loggedInUser = await login(
-        form.email,
-        form.password
-      );
-
-      if (loggedInUser.role === 'user') {
-        navigate('/user/home');
-      } else if (loggedInUser.role === 'provider') {
-        navigate('/provider/dashboard');
-      } else if (loggedInUser.role === 'admin') {
-        navigate('/admin/dashboard');
-      }
+      const res = await api.post('/auth/forgot-password', { email });
+      setMessage(res.data.message || 'If an account exists for this email, password reset instructions have been sent.');
+      setEmail('');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Login failed. Please check your credentials.'
-      );
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -57,14 +40,14 @@ const Login = () => {
         
         <div className="auth-branding-content">
           <h1 className="auth-branding-title">
-            Trusted Local Services, Right When You Need Them.
+            Recover Your Password Instantly.
           </h1>
           <p className="auth-branding-text">
-            Connect instantly with verified local plumbers, electricians, mechanics, and painters. Fast, secure, and hassle-free.
+            Enter your registered email address, and we will send you secure instructions to reset your password.
           </p>
         </div>
 
-        {/* Floating Abstract Cards */}
+        {/* Floating Abstract Chips */}
         <div className="auth-floating-cards">
           <div className="floating-service-chip chip-1 animate-float-slow-1">
             <FaBolt style={{ color: '#fbbf24' }} /> Electrician
@@ -85,17 +68,16 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Right Authentication Form Panel */}
+      {/* Right Form Panel */}
       <div className="auth-form-panel">
         <div className="auth-card animate-fade-up">
-          {/* Logo only shown on mobile screen sizes */}
           <div className="auth-logo-mobile">
             <FaBolt style={{ marginRight: 8 }} /> LocalServe
           </div>
           
           <header className="auth-header">
-            <h2 className="auth-card-title">Welcome Back</h2>
-            <p className="auth-card-subtitle">Enter your credentials to manage services</p>
+            <h2 className="auth-card-title">Forgot Password</h2>
+            <p className="auth-card-subtitle">Recover access to your marketplace account</p>
           </header>
 
           {message && (
@@ -113,15 +95,14 @@ const Login = () => {
           <form onSubmit={handleSubmit}>
             <div className="auth-form-grid">
               
-              {/* Email Control */}
               <div className="form-group">
                 <label className="form-label">Email Address</label>
                 <div className="input-icon-group">
                   <input
                     type="email"
                     placeholder="email@example.com"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="form-control"
                     disabled={loading}
                     required
@@ -132,59 +113,27 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Password Control */}
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label className="form-label">Password</label>
-                  <Link to="/forgot-password" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>
-                    Forgot Password?
-                  </Link>
-                </div>
-                <div className="input-icon-group">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="form-control"
-                    disabled={loading}
-                    required
-                  />
-                  <span className="input-icon">
-                    <FaLock />
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="input-action-icon"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-              </div>
-
             </div>
 
             <button
               type="submit"
               className="btn-primary"
-              style={{ width: '100%', padding: '12px', marginTop: 10 }}
+              style={{ width: '100%', padding: '12px', marginTop: 20 }}
               disabled={loading}
             >
               {loading ? (
                 <>
                   <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                  Signing In...
+                  Sending Link...
                 </>
-              ) : 'Sign In'}
+              ) : 'Send Reset Instructions'}
             </button>
           </form>
 
           <p className="auth-footer-text">
-            Don&apos;t have an account?{' '}
-            <Link to="/register" style={{ fontWeight: 700 }}>
-              Register Now
+            Remembered your password?{' '}
+            <Link to="/login" style={{ fontWeight: 700 }}>
+              Sign In
             </Link>
           </p>
         </div>
@@ -193,4 +142,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;

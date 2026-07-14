@@ -130,7 +130,8 @@ exports.getProfile = async (req, res) => {
         p.longitude,
         p.availability_status,
         p.verification_status,
-        p.average_rating
+        p.average_rating,
+        p.last_location_updated_at
       FROM providers p
       JOIN users u ON p.user_id = u.id
       LEFT JOIN service_categories sc ON p.category_id = sc.id
@@ -160,20 +161,90 @@ exports.getProfile = async (req, res) => {
 
 exports.updateAvailability = async (req, res) => {
   try {
-    const { availability_status } = req.body;
+    const { availability_status, latitude, longitude } = req.body;
 
-    await db.query(
-      `UPDATE providers
-       SET availability_status = ?
-       WHERE user_id = ?`,
-      [availability_status, req.user.id]
-    );
+    if (availability_status === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "availability_status is required"
+      });
+    }
 
-    res.json({
-      success: true,
-      message: "Availability updated"
-    });
+    const isOnline = !!availability_status;
+
+    if (isOnline) {
+      if (latitude === undefined || longitude === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: "Latitude and longitude are required to go online"
+        });
+      }
+
+      const latNum = Number(latitude);
+      const lngNum = Number(longitude);
+
+      if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+        return res.status(400).json({
+          success: false,
+          message: "Latitude must be a valid number between -90 and 90"
+        });
+      }
+
+      if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+        return res.status(400).json({
+          success: false,
+          message: "Longitude must be a valid number between -180 and 180"
+        });
+      }
+
+      const now = new Date();
+      await db.query(
+        `UPDATE providers
+         SET availability_status = ?,
+             latitude = ?,
+             longitude = ?,
+             last_location_updated_at = ?
+         WHERE user_id = ?`,
+        [1, latNum, lngNum, now, req.user.id]
+      );
+
+      return res.json({
+        success: true,
+        message: "You are online at your current location",
+        availability_status: true,
+        latitude: latNum,
+        longitude: lngNum,
+        last_location_updated_at: now
+      });
+    } else {
+      // Going offline: keep existing coordinates, only update status
+      await db.query(
+        `UPDATE providers
+         SET availability_status = ?
+         WHERE user_id = ?`,
+        [0, req.user.id]
+      );
+
+      const [rows] = await db.query(
+        `SELECT latitude, longitude, last_location_updated_at FROM providers WHERE user_id = ?`,
+        [req.user.id]
+      );
+
+      const lat = rows[0]?.latitude ? Number(rows[0].latitude) : null;
+      const lng = rows[0]?.longitude ? Number(rows[0].longitude) : null;
+      const lastUpdated = rows[0]?.last_location_updated_at || null;
+
+      return res.json({
+        success: true,
+        message: "You are offline",
+        availability_status: false,
+        latitude: lat,
+        longitude: lng,
+        last_location_updated_at: lastUpdated
+      });
+    }
   } catch (error) {
+    console.error("Update Availability Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error"

@@ -2,14 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { FaCheckCircle, FaTimesCircle, FaMapMarkerAlt, FaCalendarAlt, FaComments, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCheckCircle, FaTimesCircle, FaMapMarkerAlt, FaCalendarAlt, FaComments, FaCheck, FaExclamationTriangle, FaSync, FaPowerOff, FaLocationArrow } from 'react-icons/fa';
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
-  const [availability, setAvailability] = useState(true);
+  const [availability, setAvailability] = useState(false);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
+  const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [apiLoading, setApiLoading] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const [updatingBookingId, setUpdatingBookingId] = useState(null);
   const [message, setMessage] = useState('');
@@ -28,7 +35,11 @@ const ProviderDashboard = () => {
 
         const profileRes = await api.get('/providers/profile');
         if (profileRes.data && profileRes.data.provider) {
-          setAvailability(!!profileRes.data.provider.availability_status);
+          const prov = profileRes.data.provider;
+          setAvailability(!!prov.availability_status);
+          setLatitude(prov.latitude || null);
+          setLongitude(prov.longitude || null);
+          setLastLocationUpdate(prov.last_location_updated_at || null);
         }
       } catch (err) {
         console.error('Dashboard Init Error:', err);
@@ -40,23 +51,91 @@ const ProviderDashboard = () => {
     initDashboard();
   }, []);
 
-  const updateAvailability = async () => {
+  const handleGoOnline = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setGeoLoading(true);
+    setError('');
+    setMessage('');
+    setApiLoading(true);
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const acc = position.coords.accuracy;
+
+        try {
+          setGeoLoading(false);
+          const res = await api.patch('/providers/availability', {
+            availability_status: true,
+            latitude: lat,
+            longitude: lng
+          });
+
+          setAvailability(true);
+          setLatitude(lat);
+          setLongitude(lng);
+          setAccuracy(acc);
+          if (res.data?.last_location_updated_at) {
+            setLastLocationUpdate(res.data.last_location_updated_at);
+          } else {
+            setLastLocationUpdate(new Date().toISOString());
+          }
+          setMessage("You are online at your current location.");
+        } catch (err) {
+          setError(err.response?.data?.message || 'Unable to go online');
+        } finally {
+          setApiLoading(false);
+        }
+      },
+      (err) => {
+        setGeoLoading(false);
+        setApiLoading(false);
+        let msg = "Failed to get location";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "Location permission denied by user. You must allow location to go online.";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          msg = "Location details are unavailable.";
+        } else if (err.code === err.TIMEOUT) {
+          msg = "Location retrieval timed out. Please try again.";
+        }
+        setError(msg);
+      },
+      options
+    );
+  };
+
+  const handleGoOffline = async () => {
     try {
       setError('');
       setMessage('');
+      setApiLoading(true);
 
-      const newAvailability = !availability;
-
-      await api.patch('/providers/availability', {
-        availability_status: newAvailability,
+      const res = await api.patch('/providers/availability', {
+        availability_status: false
       });
 
-      setAvailability(newAvailability);
-      setMessage(
-        `Availability changed to ${newAvailability ? 'Online' : 'Offline'}`
-      );
+      setAvailability(false);
+      if (res.data) {
+        setLatitude(res.data.latitude || null);
+        setLongitude(res.data.longitude || null);
+        setLastLocationUpdate(res.data.last_location_updated_at || null);
+      }
+      setMessage("You are offline / not accepting jobs.");
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to update availability');
+    } finally {
+      setApiLoading(false);
     }
   };
 
@@ -244,23 +323,85 @@ const ProviderDashboard = () => {
       {/* Stats Summary & Availability Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 30 }}>
         
-        {/* Availability Toggle Card */}
+        {/* Availability Geolocation Card */}
         <section className="card animate-fade-up">
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>Duty Status</h2>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Work Channel:</p>
-              <span className={`badge ${availability ? 'badge-success' : 'badge-warning'}`} style={{ marginTop: 4 }}>
-                {availability ? 'ONLINE / ACCEPTING JOBS' : 'OFFLINE'}
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FaLocationArrow style={{ color: 'var(--primary)', fontSize: 14 }} /> Duty Status
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Work Channel:</p>
+              <span className={`badge ${availability ? 'badge-success' : 'badge-warning'}`}>
+                {availability ? 'ONLINE / ACCEPTING JOBS' : 'OFFLINE / NOT ACCEPTING JOBS'}
               </span>
             </div>
-            <button
-              onClick={updateAvailability}
-              className={availability ? 'btn-outline' : 'btn-primary'}
-              style={{ padding: '8px 14px', fontSize: 13 }}
-            >
-              Go {availability ? 'Offline' : 'Online'}
-            </button>
+
+            {(latitude !== null && longitude !== null) && (
+              <div style={{ padding: '10px 12px', background: 'rgba(99,102,241,0.06)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.15)', fontSize: 13 }}>
+                <p style={{ margin: '0 0 6px 0', fontWeight: 600, fontSize: 12, color: 'var(--text-muted)' }}>
+                  📍 Current Location
+                </p>
+                <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-main)' }}>
+                  Lat: {Number(latitude).toFixed(6)}
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-main)' }}>
+                  Lng: {Number(longitude).toFixed(6)}
+                </div>
+                {accuracy !== null && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Accuracy: ±{Math.round(accuracy)} m
+                  </div>
+                )}
+                {lastLocationUpdate && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Last update: {new Date(lastLocationUpdate).toLocaleString()}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {geoLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--primary)', padding: '4px 0' }}>
+                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>🌀</span>
+                Acquiring GPS location…
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              {!availability ? (
+                <button
+                  onClick={handleGoOnline}
+                  className="btn-primary"
+                  style={{ width: '100%', padding: '9px 14px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  disabled={apiLoading || geoLoading}
+                >
+                  <FaPowerOff style={{ fontSize: 12 }} />
+                  {geoLoading ? 'Locating…' : apiLoading ? 'Going Online…' : 'Go Online at Current Location'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleGoOnline}
+                    className="btn-outline"
+                    style={{ flex: 1, padding: '9px 10px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    disabled={apiLoading || geoLoading}
+                    title="Refresh your current GPS location"
+                  >
+                    <FaSync style={{ fontSize: 11, animation: (apiLoading || geoLoading) ? 'spin 1s linear infinite' : 'none' }} />
+                    {geoLoading || apiLoading ? 'Refreshing…' : 'Refresh Location'}
+                  </button>
+                  <button
+                    onClick={handleGoOffline}
+                    className="btn-primary"
+                    style={{ flex: 1, padding: '9px 10px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#ef4444', borderColor: '#ef4444' }}
+                    disabled={apiLoading || geoLoading}
+                  >
+                    <FaTimesCircle style={{ fontSize: 11 }} />
+                    {apiLoading ? 'Going Offline…' : 'Go Offline'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </section>
 

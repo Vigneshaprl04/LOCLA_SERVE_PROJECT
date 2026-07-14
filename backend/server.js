@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const helmet = require("helmet");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -17,8 +18,10 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const jwt = require("jsonwebtoken");
+const runMigrations = require("./scripts/runMigrations");
 
 const app = express();
+app.set("trust proxy", 1);
 
 const server = http.createServer(app);
 
@@ -29,13 +32,37 @@ const io = new Server(server, {
     }
 });
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
     try {
         const token = socket.handshake.auth?.token;
         if (!token) {
             return next(new Error("Authentication error: Missing token"));
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Verify active state and password changed at time
+        const [users] = await db.query(
+            "SELECT password_changed_at, is_active FROM users WHERE id = ?",
+            [decoded.id]
+        );
+
+        if (users.length === 0) {
+            return next(new Error("Authentication error: User not found"));
+        }
+
+        const user = users[0];
+        if (!user.is_active) {
+            return next(new Error("Authentication error: Account is blocked"));
+        }
+
+        if (user.password_changed_at) {
+            // MySQL DATETIME returns Date object or string. Convert to seconds timestamp.
+            const changedTimestamp = Math.floor(new Date(user.password_changed_at).getTime() / 1000);
+            if (decoded.iat < changedTimestamp) {
+                return next(new Error("Authentication error: Token invalidated by password change"));
+            }
+        }
+
         socket.userId = decoded.id;
         socket.userRole = decoded.role;
         next();
@@ -47,8 +74,9 @@ io.use((socket, next) => {
 
 app.set("io", io);
 
+app.use(helmet());
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/providers", providerRoutes);
 app.use("/api/admin", adminRoutes);
@@ -95,9 +123,14 @@ async function connectDB() {
         const conn = await db.getConnection();
         console.log("✅ MySQL Connected");
         conn.release();
+        
+        // Execute migrations on startup
+        await runMigrations();
+        
         await ensureMessagesTableExists();
     } catch (err) {
-        console.log("❌ DB Error:", err.message);
+        console.error("❌ DB/Migration Error during startup:", err.message);
+        process.exit(1); // Stop application from running with incorrect schema
     }
 }
 

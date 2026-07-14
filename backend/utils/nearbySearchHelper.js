@@ -97,6 +97,8 @@ const findProviders = async ({
       WHERE p.verification_status = 'verified'
         AND p.availability_status = TRUE
         AND u.is_active = TRUE
+        AND p.latitude IS NOT NULL
+        AND p.longitude IS NOT NULL
         ${categoryId ? "AND p.category_id = ?" : ""}
       ORDER BY p.average_rating DESC
       LIMIT 50

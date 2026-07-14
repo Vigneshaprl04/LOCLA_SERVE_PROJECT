@@ -15,6 +15,9 @@ import ChatPage from './pages/ChatPage';
 import UserProfile from './pages/UserProfile';
 import ProviderProfile from './pages/ProviderProfile';
 import AIServiceAssistant from './pages/AIServiceAssistant';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 
 import './App.css';
 
@@ -24,6 +27,9 @@ function App() {
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
