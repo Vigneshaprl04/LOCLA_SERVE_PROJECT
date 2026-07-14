@@ -122,7 +122,21 @@ app.get("/", async (req, res) => {
 app.get("/api/debug-db", async (req, res) => {
     try {
         const [bookingsCols] = await db.query("DESCRIBE bookings");
-        res.json({ success: true, bookingsCols });
+        
+        // Let's test insert query to see why it fails
+        let insertErr = null;
+        try {
+            await db.query(
+                `INSERT INTO bookings (
+                    user_id, provider_id, category_id, service_description, service_address, preferred_date, latitude, longitude, emergency_booking, estimated_price
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [1, 1, 1, "Debug test insert", "Test address", "2026-07-15 12:00:00", 13.0827, 80.2707, 0, null]
+            );
+        } catch (e) {
+            insertErr = { message: e.message, code: e.code, sqlState: e.sqlState, sqlMessage: e.sqlMessage };
+        }
+
+        res.json({ success: true, bookingsCols, insertErr });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
