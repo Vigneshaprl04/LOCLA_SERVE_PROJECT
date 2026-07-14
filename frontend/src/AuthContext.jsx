@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
     const socketUrl =
       import.meta.env.VITE_SOCKET_URL ||
-      "https://local-serve-project.onrender.com";
+      "https://locla-serve-project.onrender.com";
 
     const newSocket = io(socketUrl, {
       auth: {
