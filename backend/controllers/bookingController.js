@@ -65,6 +65,11 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    let formattedDate = preferred_date || null;
+    if (formattedDate && typeof formattedDate === "string" && formattedDate.includes("T")) {
+      formattedDate = formattedDate.replace("T", " ").replace("Z", "").split(".")[0];
+    }
+
     const [result] = await db.query(
       `INSERT INTO bookings (
         user_id,
@@ -85,7 +90,7 @@ exports.createBooking = async (req, res) => {
         category_id,
         service_description,
         service_address,
-        preferred_date || null,
+        formattedDate,
         latitude || null,
         longitude || null,
         emergency_booking,
