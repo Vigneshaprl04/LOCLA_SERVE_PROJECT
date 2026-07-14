@@ -27,30 +27,58 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
     "http://localhost:5173",
-    process.env.FRONTEND_URL
-].filter(Boolean);
+    "https://local-serve-frontend.netlify.app"
+];
+
+if (process.env.FRONTEND_URL) {
+    const urls = process.env.FRONTEND_URL.split(",");
+    urls.forEach(url => {
+        const trimmed = url.trim();
+        if (trimmed && !allowedOrigins.includes(trimmed)) {
+            allowedOrigins.push(trimmed);
+        }
+    });
+}
+
+function isOriginAllowed(origin) {
+    if (!origin) return true;
+    let normalizedOrigin = origin.trim().toLowerCase();
+    if (normalizedOrigin.endsWith("/")) {
+        normalizedOrigin = normalizedOrigin.slice(0, -1);
+    }
+    return allowedOrigins.some(allowed => {
+        let normalizedAllowed = allowed.trim().toLowerCase();
+        if (normalizedAllowed.endsWith("/")) {
+            normalizedAllowed = normalizedAllowed.slice(0, -1);
+        }
+        return normalizedOrigin === normalizedAllowed;
+    });
+}
 
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (isOriginAllowed(origin)) {
             callback(null, true);
         } else {
-            callback(new Error("Not allowed by CORS"));
+            callback(null, false);
         }
     },
-    credentials: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    optionsSuccessStatus: 200
 };
 
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
+            if (isOriginAllowed(origin)) {
                 callback(null, true);
             } else {
-                callback(new Error("Not allowed by CORS"));
+                callback(null, false);
             }
         },
-        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         credentials: true
     }
 });
