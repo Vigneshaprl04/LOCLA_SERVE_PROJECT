@@ -6,6 +6,9 @@ const { validateAndNormalizeEmail } = require("../utils/emailValidator");
 const { validatePasswordStrength } = require("../utils/passwordValidator");
 const emailService = require("../services/emailService");
 
+// In-memory rate limiting map for email verification resends (email -> timestamp)
+const resendCooldowns = new Map();
+
 exports.register = async (req, res) => {
   const connection = await db.getConnection();
   try {
@@ -91,26 +94,47 @@ exports.register = async (req, res) => {
     const userId = result.insertId;
 
     if (role === "provider") {
+      const { category_id, experience, description, working_area, city, pincode } = req.body;
       await connection.query(
-        "INSERT INTO providers (user_id) VALUES (?)",
-        [userId]
+        `INSERT INTO providers (user_id, category_id, experience, description, working_area, city, pincode)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          category_id ? Number(category_id) : null,
+          experience ? Number(experience) : null,
+          description || null,
+          working_area || null,
+          city || null,
+          pincode || null
+        ]
       );
     }
 
     await connection.commit();
 
     // Send verification email (handling SMTP failures gracefully)
+    let emailSent = true;
     try {
       await emailService.sendVerificationEmail(normalizedEmail, name, rawToken);
     } catch (mailError) {
-      console.error("❌ Registration Email Delivery Failure:", mailError.message);
-      // Keep registration successful, allow resend verification later
+      console.error("❌ Registration Email Delivery Failure:", mailError.stack || mailError.message || mailError);
+      emailSent = false;
+    }
+
+    if (!emailSent) {
+      return res.status(201).json({
+        success: true,
+        message: "Your account has been created successfully. We couldn't send the verification email right now. Please use the Resend Verification Email option.",
+        userId,
+        emailSent: false,
+      });
     }
 
     return res.status(201).json({
       success: true,
       message: "Registration successful. Please check your email to verify your account.",
       userId,
+      emailSent: true,
     });
   } catch (error) {
     await connection.rollback();
@@ -184,7 +208,7 @@ exports.login = async (req, res) => {
 
     // Check email verification policy
     if (!user.email_verified) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
         message: "Please verify your email before logging in.",
       });
@@ -499,11 +523,26 @@ exports.resendVerification = async (req, res) => {
       });
     }
 
+    // Apply 60 seconds rate limit
+    const now = Date.now();
+    if (resendCooldowns.has(normalizedEmail)) {
+      const lastTime = resendCooldowns.get(normalizedEmail);
+      const diff = Math.ceil((60000 - (now - lastTime)) / 1000);
+      if (diff > 0) {
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${diff} seconds before requesting another verification link.`
+        });
+      }
+    }
+    resendCooldowns.set(normalizedEmail, now);
+
     const user = users[0];
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // Overwriting the token details automatically invalidates any previous tokens
     await db.query(
       `UPDATE users
        SET email_verification_token_hash = ?, email_verification_expires_at = ?
@@ -514,7 +553,13 @@ exports.resendVerification = async (req, res) => {
     try {
       await emailService.sendVerificationEmail(normalizedEmail, user.name, rawToken);
     } catch (mailError) {
-      console.error("❌ Resend Verification Email Delivery Failure:", mailError.message);
+      console.error("❌ Resend Verification Email Delivery Failure:", mailError.stack || mailError.message || mailError);
+      // Remove rate limit on failure so they can retry immediately
+      resendCooldowns.delete(normalizedEmail);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again later."
+      });
     }
 
     res.json({

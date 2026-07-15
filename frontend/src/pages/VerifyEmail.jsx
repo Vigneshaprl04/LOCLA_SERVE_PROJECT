@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { FaCheckCircle, FaExclamationTriangle, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
 
@@ -16,6 +16,22 @@ const VerifyEmail = () => {
   const [resendMessage, setResendMessage] = useState('');
   const [resendError, setResendError] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+
+  // Redirection states
+  const [redirectCountdown, setRedirectCountdown] = useState(3);
+  const navigate = useNavigate();
+
+  // Cooldown rate limit state
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Resend cooldown timer effect
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     const doVerification = async () => {
@@ -37,6 +53,19 @@ const VerifyEmail = () => {
     doVerification();
   }, [token]);
 
+  // Auto-redirect to login on success
+  useEffect(() => {
+    if (!success) return;
+    if (redirectCountdown <= 0) {
+      navigate('/login');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRedirectCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [success, redirectCountdown, navigate]);
+
   const handleResend = async (e) => {
     e.preventDefault();
     setResendError('');
@@ -47,6 +76,7 @@ const VerifyEmail = () => {
       const res = await api.post('/auth/resend-verification', { email: resendEmail });
       setResendMessage(res.data.message || 'If an account is associated with this email, a new verification link has been sent.');
       setResendEmail('');
+      setResendCooldown(60);
     } catch (err) {
       setResendError(err.response?.data?.message || 'Failed to resend verification link.');
     } finally {
@@ -117,9 +147,15 @@ const VerifyEmail = () => {
             <div style={{ padding: '20px 0' }}>
               <FaCheckCircle style={{ color: '#10b981', fontSize: '3rem', marginBottom: 15 }} />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', marginBottom: 10 }}>Email Verified Successfully!</h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: 25 }}>Your account is now active and fully verified.</p>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>Your account is now active and fully verified.</p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: 25 }}>
+                <span>Redirecting to Login in {redirectCountdown}...</span>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+              </div>
+
               <Link to="/login" className="btn-primary" style={{ display: 'block', padding: '12px', textDecoration: 'none' }}>
-                Go to Login
+                Go to Login Now
               </Link>
             </div>
           ) : (
@@ -165,13 +201,15 @@ const VerifyEmail = () => {
                   type="submit"
                   className="btn-primary"
                   style={{ width: '100%', padding: '10px', marginTop: 5 }}
-                  disabled={resendLoading}
+                  disabled={resendLoading || resendCooldown > 0}
                 >
                   {resendLoading ? (
                     <>
                       <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
                       Resending...
                     </>
+                  ) : resendCooldown > 0 ? (
+                    `Resend in ${resendCooldown}s`
                   ) : 'Send Verification Email'}
                 </button>
               </form>

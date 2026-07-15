@@ -25,13 +25,44 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER || "",
     pass: process.env.EMAIL_PASS || "",
   },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000,
 });
+
+// Export transporter on exports so it can be dynamically swapped/mocked in tests
+exports.transporter = transporter;
+
+// Verify SMTP transporter during server startup
+// Log only ready status or detailed server-side error, never exposing secrets
+exports.transporter.verify((error) => {
+  if (error) {
+    console.error("❌ SMTP Transporter Verification Failed:", error.message);
+  } else {
+    console.log("✅ SMTP Server Ready");
+  }
+});
+
+/**
+ * Helper to send mail with an 8-second timeout
+ */
+const sendMailWithTimeout = (mailOptions, timeoutMs = 8000) => {
+  return Promise.race([
+    exports.transporter.sendMail(mailOptions),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("SMTP email sending timed out after 8 seconds")), timeoutMs)
+    )
+  ]);
+};
 
 /**
  * Send Email Verification link to User
  */
 exports.sendVerificationEmail = async (toEmail, name, rawToken) => {
   const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?token=${rawToken}`;
+  const host = process.env.EMAIL_HOST || "smtp.gmail.com";
+  
+  console.log(`[EmailService] Sending verification email to: ${toEmail} via host: ${host}`);
   
   const mailOptions = {
     from: `LocalServe <${process.env.EMAIL_FROM || "noreply@localserve.com"}>`,
@@ -55,7 +86,14 @@ exports.sendVerificationEmail = async (toEmail, name, rawToken) => {
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    const info = await sendMailWithTimeout(mailOptions);
+    console.log(`[EmailService] SMTP Response for ${toEmail}: ${info.response}`);
+    return info;
+  } catch (error) {
+    console.error(`[EmailService] SMTP Failure for ${toEmail}:`, error.stack || error.message || error);
+    throw error;
+  }
 };
 
 /**
@@ -63,6 +101,9 @@ exports.sendVerificationEmail = async (toEmail, name, rawToken) => {
  */
 exports.sendPasswordResetEmail = async (toEmail, name, rawToken) => {
   const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${rawToken}`;
+  const host = process.env.EMAIL_HOST || "smtp.gmail.com";
+
+  console.log(`[EmailService] Sending password reset email to: ${toEmail} via host: ${host}`);
 
   const mailOptions = {
     from: `LocalServe <${process.env.EMAIL_FROM || "noreply@localserve.com"}>`,
@@ -87,5 +128,12 @@ exports.sendPasswordResetEmail = async (toEmail, name, rawToken) => {
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    const info = await sendMailWithTimeout(mailOptions);
+    console.log(`[EmailService] SMTP Response for ${toEmail}: ${info.response}`);
+    return info;
+  } catch (error) {
+    console.error(`[EmailService] SMTP Failure for ${toEmail}:`, error.stack || error.message || error);
+    throw error;
+  }
 };

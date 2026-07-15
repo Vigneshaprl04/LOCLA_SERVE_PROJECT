@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller, FaBriefcase, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller, FaBriefcase, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
 
 const Register = () => {
   const [categories, setCategories] = useState([]);
@@ -27,6 +27,42 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // States for verification & countdown card
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [emailSent, setEmailSent] = useState(true);
+  const [countdown, setCountdown] = useState(5);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendError, setResendError] = useState('');
+  const [redirectTimerActive, setRedirectTimerActive] = useState(true);
+
+  const { login, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirection countdown effect
+  useEffect(() => {
+    if (!registrationComplete || !redirectTimerActive) return;
+    if (countdown <= 0) {
+      navigate('/login');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [registrationComplete, countdown, redirectTimerActive, navigate]);
+
+  // Resend cooldown timer effect
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -49,15 +85,28 @@ const Register = () => {
     fetchCategories();
   }, []);
 
-  const { register, login, logout } = useAuth();
-  const navigate = useNavigate();
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleResendInSuccess = async () => {
+    setRedirectTimerActive(false);
+    setResendError('');
+    setResendMessage('');
+    setResendLoading(true);
+    try {
+      const res = await api.post('/auth/resend-verification', { email: registeredEmail });
+      setResendMessage(res.data.message || 'Verification link sent successfully!');
+      setResendCooldown(60);
+    } catch (err) {
+      setResendError(err.response?.data?.message || 'Failed to resend verification email.');
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -80,47 +129,138 @@ const Register = () => {
         throw new Error('Please complete all service specifications.');
       }
 
-      await register({
+      const response = await api.post('/auth/register', {
         name: form.name,
         email: form.email,
         phone: form.phone,
         password: form.password,
         role: form.role,
-      });
+        category_id: form.category_id,
+        experience: form.experience,
+        description: form.description,
+        working_area: form.working_area,
+        city: form.city,
+        pincode: form.pincode
+      }, { timeout: 10000 });
 
-      if (form.role === 'provider') {
-        await login(form.email, form.password);
-
-        await api.put('/providers/profile', {
-          category_id: Number(form.category_id),
-          experience: Number(form.experience),
-          description: form.description,
-          working_area: form.working_area,
-          city: form.city,
-          pincode: form.pincode,
-        });
-
-        logout();
-
-        setSuccess('Partner registration completed. Admin review is pending.');
-      } else {
-        setSuccess('Account created successfully. Please login.');
-      }
-
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
+      const data = response.data;
+      setRegisteredEmail(form.email);
+      setEmailSent(data.emailSent !== false);
+      setRegistrationComplete(true);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        'Registration failed. Please try again.'
-      );
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Server is taking longer than expected. Please try again.');
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.message ||
+          'Registration failed. Please try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  if (registrationComplete) {
+    return (
+      <div className="auth-split-container">
+        {/* Left Branding Panel */}
+        <div className="auth-branding-panel">
+          <div className="decor-shape decor-1"></div>
+          <div className="decor-shape decor-2"></div>
+          <div className="auth-brand-logo">
+            <FaBolt style={{ color: 'var(--accent)' }} />
+            LocalServe
+          </div>
+          <div className="auth-branding-content">
+            <h1 className="auth-branding-title">Account Created Successfully!</h1>
+            <p className="auth-branding-text">
+              Thank you for signing up. Please verify your email to unlock all features of the marketplace.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Content Panel */}
+        <div className="auth-form-panel" style={{ padding: '40px var(--space-4)' }}>
+          <div className="auth-card animate-scale" style={{ maxWidth: '540px', textAlign: 'center', padding: '40px' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <div className="success-checkmark-wrapper" style={{ fontSize: '4rem', color: '#10b981', display: 'inline-block', animation: 'scaleIn 0.5s ease-out' }}>
+                <FaCheckCircle />
+              </div>
+            </div>
+            
+            <h2 className="auth-card-title" style={{ color: '#10b981', marginBottom: '12px' }}>
+              Account Created Successfully
+            </h2>
+            
+            <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)' }}>We&apos;ve sent a verification email to:</p>
+              <strong style={{ fontSize: '1.1rem', color: 'var(--text)' }}>{registeredEmail}</strong>
+              <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Please verify your email before logging in.
+              </p>
+            </div>
+
+            {/* If email delivery failed during registration */}
+            {!emailSent && (
+              <div className="alert alert-warning animate-fade-in" style={{ textAlign: 'left', marginBottom: '20px' }}>
+                We couldn&apos;t send the verification email right now. Please use the Resend button below.
+              </div>
+            )}
+
+            {resendMessage && (
+              <div className="alert alert-success animate-fade-in" style={{ textAlign: 'left', marginBottom: '20px' }}>
+                {resendMessage}
+              </div>
+            )}
+
+            {resendError && (
+              <div className="alert alert-danger animate-shake" style={{ textAlign: 'left', marginBottom: '20px' }}>
+                {resendError}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '30px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                Didn&apos;t receive the email?
+              </p>
+              <button
+                type="button"
+                onClick={handleResendInSuccess}
+                className="btn-secondary"
+                disabled={resendLoading || resendCooldown > 0}
+                style={{ minWidth: '200px', padding: '10px 20px' }}
+              >
+                {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
+              </button>
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>
+              {redirectTimerActive ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  <span>Redirecting to Login in {countdown}...</span>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Auto-redirect paused.</span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="btn-primary"
+                style={{ width: '100%', padding: '12px', marginTop: '16px' }}
+              >
+                Go to Login Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-split-container">

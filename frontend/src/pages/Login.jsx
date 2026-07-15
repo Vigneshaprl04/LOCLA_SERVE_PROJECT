@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
@@ -12,13 +12,46 @@ const Login = () => {
   const location = useLocation();
   const [message, setMessage] = useState(location.state?.message || '');
   
+  // Unverified account states
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendError, setResendError] = useState('');
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Resend cooldown timer effect
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendVerification = async () => {
+    setResendError('');
+    setResendMessage('');
+    setResendLoading(true);
+    try {
+      const res = await api.post('/auth/resend-verification', { email: unverifiedEmail });
+      setResendMessage(res.data.message || 'Verification link sent successfully!');
+      setResendCooldown(60);
+    } catch (err) {
+      setResendError(err.response?.data?.message || 'Failed to resend verification link.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
+    setIsUnverified(false);
     setLoading(true);
 
     try {
@@ -35,9 +68,15 @@ const Login = () => {
         navigate('/admin/dashboard');
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Login failed. Please check your credentials.'
-      );
+      console.error(err);
+      if (err.response?.status === 403 && err.response?.data?.message?.toLowerCase().includes('verify')) {
+        setIsUnverified(true);
+        setUnverifiedEmail(form.email);
+      } else {
+        setError(
+          err.response?.data?.message || 'Login failed. Please check your credentials.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -107,6 +146,37 @@ const Login = () => {
           {error && (
             <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
               {error}
+            </div>
+          )}
+
+          {isUnverified && (
+            <div className="alert alert-warning animate-fade-in" style={{ marginBottom: 20, textAlign: 'left' }}>
+              <strong style={{ display: 'block', marginBottom: 6, color: '#d97706' }}>Your account isn&apos;t verified yet.</strong>
+              <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Check your inbox at <strong>{unverifiedEmail}</strong> or click below to receive a new link.
+              </p>
+              
+              {resendMessage && (
+                <div className="alert alert-success animate-fade-in" style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}>
+                  {resendMessage}
+                </div>
+              )}
+
+              {resendError && (
+                <div className="alert alert-danger animate-shake" style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}>
+                  {resendError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="btn-secondary"
+                disabled={resendLoading || resendCooldown > 0}
+                style={{ width: '100%', padding: '8px 16px', fontSize: '0.9rem' }}
+              >
+                {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
+              </button>
             </div>
           )}
 
