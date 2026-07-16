@@ -1,61 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import api from '../api';
-import { FaCheckCircle, FaExclamationTriangle, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaCheckCircle, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
 
 const VerifyEmail = () => {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-
-  const [verifying, setVerifying] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  
-  // Resend Form State
-  const [resendEmail, setResendEmail] = useState('');
-  const [resendMessage, setResendMessage] = useState('');
-  const [resendError, setResendError] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
-
-  // Redirection states
   const [redirectCountdown, setRedirectCountdown] = useState(3);
   const navigate = useNavigate();
 
-  // Cooldown rate limit state
-  const [resendCooldown, setResendCooldown] = useState(0);
-
-  // Resend cooldown timer effect
   useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setTimeout(() => {
-      setResendCooldown(prev => prev - 1);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
-
-  useEffect(() => {
-    const doVerification = async () => {
-      if (!token) {
-        setVerifying(false);
-        setError('Verification token is missing from the link.');
-        return;
-      }
-
-      try {
-        await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
-        setSuccess(true);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to verify email. The link may have expired or is invalid.');
-      } finally {
-        setVerifying(false);
-      }
-    };
-    doVerification();
-  }, [token]);
-
-  // Auto-redirect to login on success
-  useEffect(() => {
-    if (!success) return;
     if (redirectCountdown <= 0) {
       navigate('/login');
       return;
@@ -64,25 +15,7 @@ const VerifyEmail = () => {
       setRedirectCountdown(prev => prev - 1);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [success, redirectCountdown, navigate]);
-
-  const handleResend = async (e) => {
-    e.preventDefault();
-    setResendError('');
-    setResendMessage('');
-    setResendLoading(true);
-
-    try {
-      const res = await api.post('/auth/resend-verification', { email: resendEmail });
-      setResendMessage(res.data.message || 'If an account is associated with this email, a new verification link has been sent.');
-      setResendEmail('');
-      setResendCooldown(60);
-    } catch (err) {
-      setResendError(err.response?.data?.message || 'Failed to resend verification link.');
-    } finally {
-      setResendLoading(false);
-    }
-  };
+  }, [redirectCountdown, navigate]);
 
   return (
     <div className="auth-split-container">
@@ -98,10 +31,10 @@ const VerifyEmail = () => {
         
         <div className="auth-branding-content">
           <h1 className="auth-branding-title">
-            Verify Your LocalServe Account.
+            LocalServe Account Portal
           </h1>
           <p className="auth-branding-text">
-            Confirming your email address ensures secure bookings, real-time chats, and verified customer reviews.
+            Connecting you instantly with trusted professionals in your area. Simple booking, secure payments.
           </p>
         </div>
 
@@ -138,89 +71,20 @@ const VerifyEmail = () => {
             <p className="auth-card-subtitle">Activating your marketplace access</p>
           </header>
 
-          {verifying ? (
-            <div style={{ padding: '30px 0' }}>
-              <span className="animate-spin" style={{ display: 'inline-block', fontSize: '2.5rem', marginBottom: 15 }}>🌀</span>
-              <p style={{ fontWeight: 600 }}>Verifying your email address. Please wait...</p>
+          <div style={{ padding: '20px 0' }}>
+            <FaCheckCircle style={{ color: '#10b981', fontSize: '3rem', marginBottom: 15 }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', marginBottom: 10 }}>Verification No Longer Required</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>Email verification is disabled. Your account is active and ready.</p>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: 25 }}>
+              <span>Redirecting to Login in {redirectCountdown}...</span>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
             </div>
-          ) : success ? (
-            <div style={{ padding: '20px 0' }}>
-              <FaCheckCircle style={{ color: '#10b981', fontSize: '3rem', marginBottom: 15 }} />
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', marginBottom: 10 }}>Email Verified Successfully!</h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>Your account is now active and fully verified.</p>
-              
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: 25 }}>
-                <span>Redirecting to Login in {redirectCountdown}...</span>
-                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
-              </div>
 
-              <Link to="/login" className="btn-primary" style={{ display: 'block', padding: '12px', textDecoration: 'none' }}>
-                Go to Login Now
-              </Link>
-            </div>
-          ) : (
-            <div style={{ padding: '10px 0' }}>
-              <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '3rem', marginBottom: 15 }} />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ef4444', marginBottom: 10 }}>Verification Failed</h3>
-              <div className="alert alert-danger" style={{ marginBottom: 25, textAlign: 'left' }}>
-                {error}
-              </div>
-
-              <hr style={{ border: 'none', borderTop: '1px solid #e4e4e4', margin: '25px 0' }} />
-
-              <header className="auth-header" style={{ marginBottom: 15 }}>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 5px 0', textAlign: 'left' }}>Resend Verification Link</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, textAlign: 'left' }}>Enter your email address to request a new link.</p>
-              </header>
-
-              {resendMessage && (
-                <div className="alert alert-success animate-fade-in" style={{ marginBottom: 15, textAlign: 'left' }}>
-                  {resendMessage}
-                </div>
-              )}
-
-              {resendError && (
-                <div className="alert alert-danger animate-shake" style={{ marginBottom: 15, textAlign: 'left' }}>
-                  {resendError}
-                </div>
-              )}
-
-              <form onSubmit={handleResend} style={{ textAlign: 'left' }}>
-                <div className="form-group">
-                  <input
-                    type="email"
-                    placeholder="email@example.com"
-                    value={resendEmail}
-                    onChange={(e) => setResendEmail(e.target.value)}
-                    className="form-control"
-                    disabled={resendLoading}
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  style={{ width: '100%', padding: '10px', marginTop: 5 }}
-                  disabled={resendLoading || resendCooldown > 0}
-                >
-                  {resendLoading ? (
-                    <>
-                      <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                      Resending...
-                    </>
-                  ) : resendCooldown > 0 ? (
-                    `Resend in ${resendCooldown}s`
-                  ) : 'Send Verification Email'}
-                </button>
-              </form>
-
-              <div style={{ marginTop: 25 }}>
-                <Link to="/login" style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                  Back to Sign In
-                </Link>
-              </div>
-            </div>
-          )}
+            <Link to="/login" className="btn-primary" style={{ display: 'block', padding: '12px', textDecoration: 'none' }}>
+              Go to Login Now
+            </Link>
+          </div>
         </div>
       </div>
     </div>

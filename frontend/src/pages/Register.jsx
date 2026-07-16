@@ -177,7 +177,7 @@ const Register = () => {
           <div className="auth-branding-content">
             <h1 className="auth-branding-title">Account Created Successfully!</h1>
             <p className="auth-branding-text">
-              Thank you for signing up. Please verify your email to unlock all features of the marketplace.
+              Welcome to LocalServe. Your account is ready for use.
             </p>
           </div>
         </div>
@@ -196,45 +196,11 @@ const Register = () => {
             </h2>
             
             <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)' }}>We&apos;ve sent a verification email to:</p>
+              <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)' }}>Welcome aboard! Your account has been created for:</p>
               <strong style={{ fontSize: '1.1rem', color: 'var(--text)' }}>{registeredEmail}</strong>
               <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                Please verify your email before logging in.
+                You can log in to your account immediately.
               </p>
-            </div>
-
-            {/* If email delivery failed during registration */}
-            {!emailSent && (
-              <div className="alert alert-warning animate-fade-in" style={{ textAlign: 'left', marginBottom: '20px' }}>
-                We couldn&apos;t send the verification email right now. Please use the Resend button below.
-              </div>
-            )}
-
-            {resendMessage && (
-              <div className="alert alert-success animate-fade-in" style={{ textAlign: 'left', marginBottom: '20px' }}>
-                {resendMessage}
-              </div>
-            )}
-
-            {resendError && (
-              <div className="alert alert-danger animate-shake" style={{ textAlign: 'left', marginBottom: '20px' }}>
-                {resendError}
-              </div>
-            )}
-
-            <div style={{ marginBottom: '30px' }}>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-                Didn&apos;t receive the email?
-              </p>
-              <button
-                type="button"
-                onClick={handleResendInSuccess}
-                className="btn-secondary"
-                disabled={resendLoading || resendCooldown > 0}
-                style={{ minWidth: '200px', padding: '10px 20px' }}
-              >
-                {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
-              </button>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>

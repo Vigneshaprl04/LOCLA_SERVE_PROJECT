@@ -80,15 +80,10 @@ exports.register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate secure email verification token
-    const rawToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
-
     const [result] = await connection.query(
       `INSERT INTO users (name, email, phone, password, role, email_verified, email_verification_token_hash, email_verification_expires_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, normalizedEmail, phone || null, hashedPassword, role, 0, tokenHash, tokenExpires]
+      [name, normalizedEmail, phone || null, hashedPassword, role, 1, null, null]
     );
 
     const userId = result.insertId;
@@ -112,29 +107,11 @@ exports.register = async (req, res) => {
 
     await connection.commit();
 
-    // Send verification email (handling SMTP failures gracefully)
-    let emailSent = true;
-    try {
-      await emailService.sendVerificationEmail(normalizedEmail, name, rawToken);
-    } catch (mailError) {
-      console.error("❌ Registration Email Delivery Failure:", mailError.stack || mailError.message || mailError);
-      emailSent = false;
-    }
-
-    if (!emailSent) {
-      return res.status(201).json({
-        success: true,
-        message: "Your account has been created successfully. We couldn't send the verification email right now. Please use the Resend Verification Email option.",
-        userId,
-        emailSent: false,
-      });
-    }
-
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Please check your email to verify your account.",
+      message: "Registration successful. You can now log in.",
       userId,
-      emailSent: true,
+      emailSent: false,
     });
   } catch (error) {
     await connection.rollback();
@@ -206,13 +183,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check email verification policy
-    if (!user.email_verified) {
-      return res.status(403).json({
-        success: false,
-        message: "Please verify your email before logging in.",
-      });
-    }
+    // Email verification check removed for verification-free login flow
 
     if (!user.is_active) {
       return res.status(403).json({
@@ -386,33 +357,22 @@ exports.updateProfile = async (req, res) => {
     await connection.beginTransaction();
 
     if (isEmailChanging) {
-      // Generate new email verification token
-      const rawToken = crypto.randomBytes(32).toString("hex");
-      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-      const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
       await connection.query(
         `UPDATE users
          SET name = ?, email = ?, phone = ?, address = ?, area = ?, city = ?, pincode = ?,
-             email_verified = 0,
-             email_verification_token_hash = ?,
-             email_verification_expires_at = ?
+             email_verified = 1,
+             email_verification_token_hash = NULL,
+             email_verification_expires_at = NULL
          WHERE id = ?`,
-        [name, normalizedEmail, phone || null, address || null, area || null, city || null, pincode || null, tokenHash, tokenExpires, req.user.id]
+        [name, normalizedEmail, phone || null, address || null, area || null, city || null, pincode || null, req.user.id]
       );
 
       await connection.commit();
 
-      try {
-        await emailService.sendVerificationEmail(normalizedEmail, name, rawToken);
-      } catch (mailError) {
-        console.error("❌ Email Change Verification Delivery Failure:", mailError.message);
-      }
-
       return res.json({
         success: true,
-        message: "Profile updated. Please verify your new email address.",
-        emailVerified: false
+        message: "Profile updated successfully.",
+        emailVerified: true
       });
     } else {
       await connection.query(
@@ -595,11 +555,11 @@ exports.forgotPassword = async (req, res) => {
     const normalizedEmail = emailCheck.normalizedEmail;
 
     const [users] = await db.query(
-      "SELECT id, name, is_active, email_verified FROM users WHERE email = ?",
+      "SELECT id, name, is_active FROM users WHERE email = ?",
       [normalizedEmail]
     );
 
-    if (users.length === 0 || !users[0].is_active || !users[0].email_verified) {
+    if (users.length === 0 || !users[0].is_active) {
       return res.json({
         success: true,
         message: "If an account exists for this email, password reset instructions have been sent."

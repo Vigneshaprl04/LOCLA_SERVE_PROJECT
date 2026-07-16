@@ -149,36 +149,7 @@ const Login = () => {
             </div>
           )}
 
-          {isUnverified && (
-            <div className="alert alert-warning animate-fade-in" style={{ marginBottom: 20, textAlign: 'left' }}>
-              <strong style={{ display: 'block', marginBottom: 6, color: '#d97706' }}>Your account isn&apos;t verified yet.</strong>
-              <p style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                Check your inbox at <strong>{unverifiedEmail}</strong> or click below to receive a new link.
-              </p>
-              
-              {resendMessage && (
-                <div className="alert alert-success animate-fade-in" style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}>
-                  {resendMessage}
-                </div>
-              )}
 
-              {resendError && (
-                <div className="alert alert-danger animate-shake" style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}>
-                  {resendError}
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                className="btn-secondary"
-                disabled={resendLoading || resendCooldown > 0}
-                style={{ width: '100%', padding: '8px 16px', fontSize: '0.9rem' }}
-              >
-                {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Email'}
-              </button>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit}>
             <div className="auth-form-grid">
