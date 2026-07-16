@@ -23,7 +23,18 @@ const ProviderDashboard = () => {
   const [error, setError] = useState('');
   const [prices, setPrices] = useState({});
 
-  // Load dashboard data: bookings & current availability
+  // Provider earnings analytics state
+  const [earnings, setEarnings] = useState({
+    todayEarnings: 0,
+    weeklyEarnings: 0,
+    monthlyEarnings: 0,
+    completedPayments: 0,
+    pendingPayments: 0,
+    failedPayments: 0,
+    averageEarnings: 0
+  });
+
+  // Load dashboard data: bookings, availability & earnings stats
   useEffect(() => {
     const initDashboard = async () => {
       try {
@@ -40,6 +51,15 @@ const ProviderDashboard = () => {
           setLatitude(prov.latitude || null);
           setLongitude(prov.longitude || null);
           setLastLocationUpdate(prov.last_location_updated_at || null);
+        }
+
+        try {
+          const statsRes = await api.get('/payments/dashboard/provider');
+          if (statsRes.data && statsRes.data.stats) {
+            setEarnings(statsRes.data.stats);
+          }
+        } catch (statsErr) {
+          console.error('Failed to load provider earnings stats:', statsErr);
         }
       } catch (err) {
         console.error('Dashboard Init Error:', err);
@@ -427,6 +447,34 @@ const ProviderDashboard = () => {
                 {completedCount}
               </span>
             </div>
+          </div>
+        </section>
+
+        {/* Earnings Card */}
+        <section className="card animate-fade-up" style={{ animationDelay: '150ms' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>Earnings & Payments</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, textAlign: 'left' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Today</p>
+              <strong style={{ fontSize: 16, color: 'var(--success)' }}>₹{earnings.todayEarnings.toFixed(2)}</strong>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>This Week</p>
+              <strong style={{ fontSize: 16, color: 'var(--primary)' }}>₹{earnings.weeklyEarnings.toFixed(2)}</strong>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>This Month</p>
+              <strong style={{ fontSize: 16, color: 'var(--text-main)' }}>₹{earnings.monthlyEarnings.toFixed(2)}</strong>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Average Job</p>
+              <strong style={{ fontSize: 16, color: 'var(--accent)' }}>₹{earnings.averageEarnings.toFixed(2)}</strong>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 8, fontSize: '11px', color: 'var(--text-muted)' }}>
+            <span>Paid Jobs: <strong style={{ color: 'var(--success)' }}>{earnings.completedPayments}</strong></span>
+            <span>Pending: <strong style={{ color: 'var(--warning)' }}>{earnings.pendingPayments}</strong></span>
+            <span>Failed: <strong style={{ color: '#ef4444' }}>{earnings.failedPayments}</strong></span>
           </div>
         </section>
       </div>
