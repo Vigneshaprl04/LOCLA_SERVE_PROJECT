@@ -17,7 +17,8 @@ const {
 
 const router = express.Router();
 
-router.get("/search", protect, searchProviders);
+const providerAvailabilityRoutes = require("./providerAvailabilityRoutes");
+router.use("/", providerAvailabilityRoutes);
 
 router.get(
   "/nearby",
