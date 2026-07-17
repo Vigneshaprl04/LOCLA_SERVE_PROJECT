@@ -7,6 +7,8 @@
 class PresenceManager {
   constructor() {
     this.presence = new Map();
+    // Maps providerId (Number) -> { lastHeartbeat: Date, timeout: Timer }
+    this.heartbeats = new Map();
   }
 
   /**
@@ -71,6 +73,51 @@ class PresenceManager {
    */
   getOnlineProviders() {
     return Array.from(this.presence.keys());
+  }
+
+  /**
+   * Resets/registers heartbeat metadata for a provider.
+   * Clears any active timeout and schedules a new timeout of 40 seconds.
+   * @param {number} providerId 
+   * @param {function} onTimeoutCallback - Function to invoke when heartbeat is missed
+   */
+  resetHeartbeat(providerId, onTimeoutCallback) {
+    const id = Number(providerId);
+    if (isNaN(id) || id <= 0) return;
+
+    this.clearHeartbeat(id);
+
+    const timer = setTimeout(onTimeoutCallback, 40000); // 30s heartbeat + 10s grace
+    this.heartbeats.set(id, {
+      lastHeartbeat: new Date(),
+      timeout: timer
+    });
+  }
+
+  /**
+   * Clears heartbeat timeout and metadata for a provider.
+   * @param {number} providerId 
+   */
+  clearHeartbeat(providerId) {
+    const id = Number(providerId);
+    const meta = this.heartbeats.get(id);
+    if (meta) {
+      if (meta.timeout) {
+        clearTimeout(meta.timeout);
+      }
+      this.heartbeats.delete(id);
+    }
+  }
+
+  /**
+   * Retrieves the last heartbeat timestamp for a provider.
+   * @param {number} providerId 
+   * @returns {Date|null}
+   */
+  getLastHeartbeat(providerId) {
+    const id = Number(providerId);
+    const meta = this.heartbeats.get(id);
+    return meta ? meta.lastHeartbeat : null;
   }
 }
 

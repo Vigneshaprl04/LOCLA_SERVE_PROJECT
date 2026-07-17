@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaUserCog, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
+import { useProviderPresence } from "../hooks/useProviderPresence";
 
 const getCategoryIcon = (name) => {
   switch (name) {
@@ -282,57 +283,73 @@ function UserHome() {
         /* Providers grid cards */
         <section className="provider-grid">
           {providers.map((provider, index) => (
-            <article
-              className="provider-card card-lift animate-fade-up"
-              style={{ animationDelay: `${index * 50}ms` }}
+            <ProviderCard
               key={provider.provider_id}
-            >
-              <div>
-                <div className="provider-card-header">
-                  <span className="badge badge-accent">
-                    {provider.category_name}
-                  </span>
-                  <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <FaMapMarkerAlt size={10} /> {Number(provider.distance_km).toFixed(1)} KM
-                  </span>
-                </div>
-
-                <h3 className="provider-name">
-                  {provider.name}
-                  {provider.verification_status === 'verified' && (
-                    <span style={{ color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600 }}>✓ Verified</span>
-                  )}
-                </h3>
-
-                <div className="provider-details-row">
-                  <div className="provider-meta-item">
-                    <FaStar color="#f59e0b" />
-                    <strong>{Number(provider.average_rating || 0).toFixed(1)}</strong>
-                  </div>
-                  <div className="provider-meta-item">
-                    <FaBriefcase />
-                    <span>{provider.experience} Yrs Exp</span>
-                  </div>
-                </div>
-
-                <p className="provider-description">
-                  {provider.description || 'No description provided. Connect with them to learn details.'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => navigate(`/providers/${provider.provider_id}`)}
-                className="btn-primary"
-                style={{ width: '100%', marginTop: 8 }}
-              >
-                View Profile & Book
-              </button>
-            </article>
+              provider={provider}
+              index={index}
+              navigate={navigate}
+            />
           ))}
         </section>
       )}
 
     </div>
+  );
+}
+
+function ProviderCard({ provider, index, navigate }) {
+  const isOnline = useProviderPresence(provider.provider_id, provider.availability_status);
+
+  return (
+    <article
+      className="provider-card card-lift animate-fade-up"
+      style={{ animationDelay: `${index * 50}ms` }}
+      key={provider.provider_id}
+    >
+      <div>
+        <div className="provider-card-header" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <span className="badge badge-accent">
+            {provider.category_name}
+          </span>
+          <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <FaMapMarkerAlt size={10} /> {Number(provider.distance_km).toFixed(1)} KM
+          </span>
+          <span className={`badge ${isOnline ? 'badge-success' : 'badge-danger'}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isOnline ? "🟢 Online" : "🔴 Offline"}
+          </span>
+        </div>
+
+        <h3 className="provider-name">
+          {provider.name}
+          {provider.verification_status === 'verified' && (
+            <span style={{ color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600, marginLeft: 6 }}>✓ Verified</span>
+          )}
+        </h3>
+
+        <div className="provider-details-row">
+          <div className="provider-meta-item">
+            <FaStar color="#f59e0b" />
+            <strong>{Number(provider.average_rating || 0).toFixed(1)}</strong>
+          </div>
+          <div className="provider-meta-item">
+            <FaBriefcase />
+            <span>{provider.experience} Yrs Exp</span>
+          </div>
+        </div>
+
+        <p className="provider-description">
+          {provider.description || 'No description provided. Connect with them to learn details.'}
+        </p>
+      </div>
+
+      <button
+        onClick={() => navigate(`/providers/${provider.provider_id}`)}
+        className="btn-primary"
+        style={{ width: '100%', marginTop: 8 }}
+      >
+        View Profile & Book
+      </button>
+    </article>
   );
 }
 

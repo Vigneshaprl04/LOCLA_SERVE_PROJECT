@@ -116,9 +116,9 @@ class ProviderRepository {
       const isOnlineVal = isOnline ? 1 : 0;
       const [result] = await conn.query(
         `UPDATE providers
-         SET is_online = ?, last_seen = ?
+         SET is_online = ?, availability_status = ?, last_seen = ?
          WHERE user_id = ?`,
-        [isOnlineVal, lastSeen || null, userId]
+        [isOnlineVal, isOnlineVal, lastSeen || null, userId]
       );
       return result.affectedRows > 0;
     } catch (error) {

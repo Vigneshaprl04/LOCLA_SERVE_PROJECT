@@ -5,10 +5,11 @@ import api from '../api';
 import { FaCheckCircle, FaTimesCircle, FaMapMarkerAlt, FaCalendarAlt, FaComments, FaCheck, FaExclamationTriangle, FaSync, FaPowerOff, FaLocationArrow } from 'react-icons/fa';
 
 const ProviderDashboard = () => {
-  const { user } = useAuth();
+  const { user, socket } = useAuth();
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState([]);
+  const [providerId, setProviderId] = useState(null);
   const [availability, setAvailability] = useState(false);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
@@ -47,6 +48,7 @@ const ProviderDashboard = () => {
         const profileRes = await api.get('/providers/profile');
         if (profileRes.data && profileRes.data.provider) {
           const prov = profileRes.data.provider;
+          setProviderId(prov.provider_id);
           setAvailability(!!prov.availability_status);
           setLatitude(prov.latitude || null);
           setLongitude(prov.longitude || null);
@@ -69,7 +71,45 @@ const ProviderDashboard = () => {
       }
     };
     initDashboard();
-  }, []);
+  // Emit provider_join when socket connects or reconnects
+  useEffect(() => {
+    if (!socket || !providerId) return;
+
+    const joinPresence = () => {
+      socket.emit("provider_join", { providerId });
+      console.log(`[Dashboard] Emitted provider_join for provider ${providerId}`);
+    };
+
+    if (socket.connected) {
+      joinPresence();
+    }
+
+    socket.on("connect", joinPresence);
+
+    return () => {
+      socket.off("connect", joinPresence);
+    };
+  }, [socket, providerId]);
+
+  // Emit provider_heartbeat every 30 seconds from the provider client
+  useEffect(() => {
+    if (!socket || !providerId) return;
+
+    const sendHeartbeat = () => {
+      if (socket.connected) {
+        socket.emit("provider_heartbeat");
+        console.log("[Dashboard] Emitted heartbeat to server");
+      }
+    };
+
+    // Send immediately on mount/load, and then every 30 seconds
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [socket, providerId]);
 
   const handleGoOnline = () => {
     if (!navigator.geolocation) {

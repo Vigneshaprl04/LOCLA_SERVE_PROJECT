@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { io } from "socket.io-client";
+import { getSocket, disconnectSocket } from "./socket/socketClient";
 import api from "./api";
 
 const AuthContext = createContext(null);
@@ -34,25 +34,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!token) {
       setSocket(null);
+      disconnectSocket();
       return;
     }
 
-    const socketUrl =
-      import.meta.env.VITE_SOCKET_URL ||
-      "https://locla-serve-project.onrender.com";
-
-    const newSocket = io(socketUrl, {
-      auth: {
-        token,
-      },
-      transports: ["websocket", "polling"],
-    });
-
+    const newSocket = getSocket(token);
     setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
   }, [token]);
 
   const login = async (email, password) => {

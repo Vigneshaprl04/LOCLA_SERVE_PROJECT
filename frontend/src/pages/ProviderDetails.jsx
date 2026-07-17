@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { FaArrowLeft, FaStar, FaMapMarkerAlt, FaBriefcase, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { useProviderPresence } from '../hooks/useProviderPresence';
 
 const ProviderDetails = () => {
   const { providerId } = useParams();
@@ -21,6 +22,8 @@ const ProviderDetails = () => {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  const isOnline = useProviderPresence(providerId, provider?.availability_status);
 
   useEffect(() => {
     const fetchProvider = async () => {
@@ -142,8 +145,8 @@ const ProviderDetails = () => {
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <span className={`badge ${provider.availability_status ? 'badge-success' : 'badge-danger'}`}>
-                  {provider.availability_status ? 'Online & Available' : 'Currently Offline'}
+                <span className={`badge ${isOnline ? 'badge-success' : 'badge-danger'}`}>
+                  {isOnline ? 'Online & Available' : 'Currently Offline'}
                 </span>
                 <span className="badge badge-warning">
                   <FaStar style={{ marginRight: 4 }} /> {Number(provider.average_rating || 0).toFixed(1)} Rating
@@ -294,15 +297,22 @@ const ProviderDetails = () => {
                 </label>
               </div>
 
+              {!isOnline && (
+                <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
+                  <FaExclamationTriangle />
+                  <span>Provider is currently offline</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={bookingLoading || !provider.availability_status}
+                disabled={bookingLoading || !isOnline}
                 className="btn-primary"
                 style={{ width: '100%', padding: '12px' }}
               >
                 {bookingLoading
                   ? 'Requesting Service...'
-                  : provider.availability_status
+                  : isOnline
                     ? 'Request Booking'
                     : 'Provider Unavailable'}
               </button>
