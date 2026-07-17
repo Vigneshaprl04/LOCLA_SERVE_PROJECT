@@ -44,6 +44,19 @@ async function runMigrations() {
       )
     `);
 
+    // Ensure provider_status_logs table exists
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS provider_status_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        provider_id INT NOT NULL,
+        previous_status VARCHAR(50) NULL,
+        new_status VARCHAR(50) NOT NULL,
+        changed_by INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_log_provider (provider_id)
+      )
+    `);
+
     // 1. Check/Add columns in users, providers, and payments tables
     const columnsToVerify = [
       { table: "users", column: "email_verified", definition: "TINYINT(1) NOT NULL DEFAULT 0" },
@@ -55,6 +68,8 @@ async function runMigrations() {
       { table: "users", column: "failed_login_attempts", definition: "INT NOT NULL DEFAULT 0" },
       { table: "users", column: "login_locked_until", definition: "DATETIME NULL" },
       { table: "providers", column: "last_location_updated_at", definition: "TIMESTAMP NULL DEFAULT NULL" },
+      { table: "providers", column: "is_online", definition: "TINYINT(1) NOT NULL DEFAULT 0" },
+      { table: "providers", column: "last_seen", definition: "DATETIME NULL" },
       { table: "payments", column: "provider_id", definition: "INT NULL" },
       { table: "payments", column: "razorpay_order_id", definition: "VARCHAR(255) NULL" },
       { table: "payments", column: "razorpay_payment_id", definition: "VARCHAR(255) NULL" },
