@@ -125,6 +125,10 @@ io.use(async (socket, next) => {
 
 app.set("io", io);
 
+// Initialize modular Socket.IO server
+const socketServer = require("./socket/socketServer");
+socketServer.init(io);
+
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "10kb" }));

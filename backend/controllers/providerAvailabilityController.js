@@ -2,6 +2,7 @@
 
 const providerService = require("../services/providerService");
 const MESSAGES = require("../constants/messages");
+const socketServer = require("../socket/socketServer");
 
 /**
  * REST controller for Provider Availability operations.
@@ -15,6 +16,13 @@ exports.goOnline = async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await providerService.setProviderOnline(userId);
+
+    // Broadcast availability status update via Socket.IO
+    socketServer.broadcastProviderStatus({
+      providerId: result.data.providerId,
+      isOnline: result.data.isOnline,
+      lastSeen: result.data.lastSeen
+    });
 
     return res.status(200).json({
       success: true,
@@ -42,6 +50,13 @@ exports.goOffline = async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await providerService.setProviderOffline(userId);
+
+    // Broadcast availability status update via Socket.IO
+    socketServer.broadcastProviderStatus({
+      providerId: result.data.providerId,
+      isOnline: result.data.isOnline,
+      lastSeen: result.data.lastSeen
+    });
 
     return res.status(200).json({
       success: true,
