@@ -57,7 +57,23 @@ async function runMigrations() {
       )
     `);
 
-    // 1. Check/Add columns in users, providers, and payments tables
+    // Ensure notifications table exists with proper structure
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        booking_id INT NULL,
+        title VARCHAR(255) NULL,
+        message TEXT NULL,
+        type VARCHAR(50) NULL,
+        is_read TINYINT(1) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_notification_user (user_id),
+        INDEX idx_notification_booking (booking_id)
+      )
+    `);
+
+    // 1. Check/Add columns in users, providers, payments, and notifications tables
     const columnsToVerify = [
       { table: "users", column: "email_verified", definition: "TINYINT(1) NOT NULL DEFAULT 0" },
       { table: "users", column: "email_verification_token_hash", definition: "VARCHAR(255) NULL" },
@@ -78,7 +94,8 @@ async function runMigrations() {
       { table: "payments", column: "total_amount", definition: "DECIMAL(10,2) NOT NULL DEFAULT 0.00" },
       { table: "payments", column: "payment_method", definition: "VARCHAR(50) NULL" },
       { table: "payments", column: "invoice_number", definition: "VARCHAR(255) NULL UNIQUE" },
-      { table: "payments", column: "paid_at", definition: "DATETIME NULL" }
+      { table: "payments", column: "paid_at", definition: "DATETIME NULL" },
+      { table: "notifications", column: "booking_id", definition: "INT NULL" }
     ];
 
     for (const col of columnsToVerify) {

@@ -1,37 +1,35 @@
-const db = require("../config/db");
+"use strict";
 
+const notificationService = require("../services/notificationService");
+
+/**
+ * Backward-compatible helper utility that routes notification creations
+ * through the unified notificationService layer.
+ * 
+ * @param {object} params
+ * @param {object} [params.io] - Kept for backward compatibility signature
+ * @param {number} params.userId
+ * @param {string} params.title
+ * @param {string} params.message
+ * @param {string} [params.type]
+ * @param {number|null} [params.bookingId]
+ * @returns {Promise<object>} The stored notification
+ */
 const createNotification = async ({
   io,
   userId,
   title,
   message,
-  type = "general"
+  type = "general",
+  bookingId = null
 }) => {
-  const [result] = await db.query(
-    `INSERT INTO notifications
-     (user_id, title, message, type)
-     VALUES (?, ?, ?, ?)`,
-    [userId, title, message, type]
-  );
-
-  const notification = {
-    id: result.insertId,
-    user_id: userId,
+  return await notificationService.createNotification({
+    userId,
+    bookingId,
     title,
     message,
-    type,
-    is_read: false,
-    created_at: new Date()
-  };
-
-  if (io) {
-    io.to(`user_${userId}`).emit(
-      "new_notification",
-      notification
-    );
-  }
-
-  return notification;
+    type
+  });
 };
 
 module.exports = createNotification;

@@ -151,7 +151,7 @@ exports.verifyPayment = async (req, res) => {
     await connection.beginTransaction();
 
     const [payments] = await connection.query(
-      `SELECT id, booking_id, user_id, payment_status, total_amount, invoice_number
+      `SELECT id, booking_id, user_id, provider_id, payment_status, total_amount, invoice_number
        FROM payments
        WHERE razorpay_order_id = ?
        FOR UPDATE`,
@@ -215,6 +215,39 @@ exports.verifyPayment = async (req, res) => {
 
     await connection.commit();
 
+    // Create notifications for payment success after transaction commits
+    const createNotification = require("../utils/createNotification");
+    try {
+      // Notify customer
+      await createNotification({
+        userId: payment.user_id,
+        title: "Payment Successful",
+        message: `Your payment of ₹${payment.total_amount} for booking #${payment.booking_id} was successful. Invoice: ${invoiceNumber}`,
+        type: "PAYMENT_SUCCESS",
+        bookingId: payment.booking_id
+      });
+
+      // Notify provider
+      if (payment.provider_id) {
+        const [provUser] = await connection.query(
+          "SELECT user_id FROM providers WHERE id = ?",
+          [payment.provider_id]
+        );
+        const providerUserId = provUser[0]?.user_id;
+        if (providerUserId) {
+          await createNotification({
+            userId: providerUserId,
+            title: "Payment Received",
+            message: `Customer paid ₹${payment.total_amount} for booking #${payment.booking_id}. Invoice: ${invoiceNumber}`,
+            type: "PAYMENT_SUCCESS",
+            bookingId: payment.booking_id
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error("Failed to create payment success notifications:", notifErr.message);
+    }
+
     res.json({
       success: true,
       message: "Payment verified successfully",
@@ -238,7 +271,7 @@ exports.failPayment = async (req, res) => {
     }
 
     const [payments] = await db.query(
-      `SELECT id, booking_id, user_id, payment_status FROM payments WHERE razorpay_order_id = ?`,
+      `SELECT id, booking_id, user_id, payment_status, total_amount FROM payments WHERE razorpay_order_id = ?`,
       [razorpay_order_id]
     );
 
@@ -267,6 +300,20 @@ exports.failPayment = async (req, res) => {
     );
 
     await logPaymentEvent(db, payment.id, payment.booking_id, payment.payment_status, "failed", `Payment attempt failed: ${error_reason || "Unknown reason"}`);
+
+    // Create notification for payment failure
+    const createNotification = require("../utils/createNotification");
+    try {
+      await createNotification({
+        userId: payment.user_id,
+        title: "Payment Failed",
+        message: `Your payment attempt of ₹${payment.total_amount || "0"} for booking #${payment.booking_id} failed: ${error_reason || "Unknown reason"}`,
+        type: "PAYMENT_FAILED",
+        bookingId: payment.booking_id
+      });
+    } catch (notifErr) {
+      console.error("Failed to create payment failure notification:", notifErr.message);
+    }
 
     res.json({ success: true, message: "Payment status updated to failed" });
   } catch (error) {

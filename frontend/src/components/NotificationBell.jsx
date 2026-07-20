@@ -1,209 +1,149 @@
-import { useEffect, useState, useRef } from 'react';
-import { FaBell, FaCheck, FaTrash, FaInbox } from 'react-icons/fa';
-import { useAuth } from '../AuthContext';
-import api from '../api';
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { FaBell, FaTrash } from "react-icons/fa";
+import { useNotifications } from "../hooks/useNotifications";
+import { useAuth } from "../AuthContext";
+import api from "../api";
 
-const NotificationBell = () => {
-  const { socket, user } = useAuth();
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+export const NotificationBell = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const panelRef = useRef(null);
+  const dropdownRef = useRef(null);
 
-  // Close panel when clicking outside
+  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const response = await api.get('/notifications');
-      setNotifications(response.data.notifications || []);
-    } catch (err) {
-      setError('Failed to load notifications');
-    } finally {
-      setLoading(false);
+  const handleToggle = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const handleNotificationClick = (notif) => {
+    if (!notif.is_read) {
+      markAsRead(notif.id);
+    }
+    setIsOpen(false);
+
+    // Route dynamically based on user role and booking_id
+    if (notif.booking_id) {
+      if (user?.role === "provider") {
+        navigate("/provider/dashboard");
+      } else {
+        navigate("/user/bookings");
+      }
     }
   };
 
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await api.get('/notifications/unread-count');
-      setUnreadCount(response.data.unreadCount || 0);
-    } catch (err) {
-      console.error('Failed to load unread count:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-
-    fetchNotifications();
-    fetchUnreadCount();
-  }, [user]);
-
-  // Real-time socket events
-  useEffect(() => {
-    if (!socket) return;
-
-    const onNewNotification = (notification) => {
-      setNotifications((prev) => {
-        // Prevent duplicate entries
-        if (prev.some((n) => n.id === notification.id)) return prev;
-        return [notification, ...prev]; // Newest first
-      });
-      setUnreadCount((prev) => prev + 1);
-    };
-
-    socket.on('new_notification', onNewNotification);
-
-    return () => {
-      socket.off('new_notification', onNewNotification);
-    };
-  }, [socket]);
-
-  const handleMarkAsRead = async (id, e) => {
-    e.stopPropagation();
-    try {
-      await api.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await api.patch('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
-  };
-
-  const handleDelete = async (id, e) => {
+  const handleDelete = async (e, id) => {
     e.stopPropagation();
     try {
       await api.delete(`/notifications/${id}`);
-      const deleted = notifications.find((n) => n.id === id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      if (deleted && !deleted.is_read) {
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
+      // Triggers visual refresh of list by reloading window or context
+      window.location.reload();
     } catch (err) {
-      console.error('Failed to delete notification:', err);
-    }
-  };
-
-  const togglePanel = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      fetchNotifications();
-      fetchUnreadCount();
+      console.error("Failed to delete notification:", err);
     }
   };
 
   return (
-    <div className="notification-bell-container" ref={panelRef}>
-      {/* Bell Icon Trigger */}
-      <button onClick={togglePanel} className="notification-bell-btn" title="Notifications">
-        <FaBell size={18} />
+    <div className="notification-bell-container" ref={dropdownRef} style={{ position: "relative", display: "inline-block" }}>
+      <button onClick={handleToggle} className="bell-button" style={{ background: "none", border: "none", cursor: "pointer", position: "relative", padding: "8px", color: "var(--text-main)", outline: "none", display: "flex", alignItems: "center" }} title="Notifications">
+        <FaBell size={19} />
         {unreadCount > 0 && (
-          <span className="notification-badge pulse animate-scale">
-            {unreadCount > 99 ? '99+' : unreadCount}
+          <span className="bell-badge" style={{ position: "absolute", top: "2px", right: "2px", backgroundColor: "var(--danger, #dc3545)", color: "#fff", borderRadius: "50%", padding: "2px 6px", fontSize: "10px", fontWeight: "bold", minWidth: "12px", textAlign: "center", lineHeight: 1 }}>
+            {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Notifications Dropdown Panel */}
       {isOpen && (
-        <div className="notification-dropdown animate-scale">
-          <header className="notification-dropdown-header">
-            <span>Notifications</span>
+        <div className="notifications-dropdown animate-fade-up" style={{ position: "absolute", right: 0, top: "45px", width: "320px", maxHeight: "400px", backgroundColor: "var(--bg-card, #fff)", border: "1px solid var(--border-color, #eaeaea)", borderRadius: "var(--radius-lg, 12px)", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", zIndex: 1000, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          
+          <header style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-color, #eaeaea)", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--bg-app)" }}>
+            <h3 style={{ margin: 0, fontSize: "14px", fontWeight: "700" }}>Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={handleMarkAllAsRead} className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem', border: 'none' }}>
-                <FaCheck style={{ marginRight: 4 }} /> Mark all read
+              <button onClick={markAllAsRead} className="btn-text" style={{ fontSize: "11px", color: "var(--primary)", border: "none", background: "none", cursor: "pointer", fontWeight: "600", padding: 0 }}>
+                Mark all as read
               </button>
             )}
           </header>
 
-          {error && <div className="alert alert-danger" style={{ borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>{error}</div>}
-
-          <div className="notification-dropdown-list">
+          <div style={{ flex: 1, overflowY: "auto", maxHeight: "300px" }}>
             {loading && notifications.length === 0 ? (
-              <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <span className="animate-spin" style={{ display: 'inline-block', marginBottom: 8 }}>🌀</span>
-                <p style={{ margin: 0, fontSize: '0.85rem' }}>Loading notifications...</p>
+              <div style={{ padding: "20px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+                Loading...
               </div>
             ) : notifications.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <FaInbox size={22} style={{ marginBottom: 8, opacity: 0.5 }} />
-                <p style={{ margin: 0, fontSize: '0.85rem' }}>All caught up!</p>
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
+                No notifications yet.
               </div>
             ) : (
               notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  className={`notification-dropdown-item ${notif.is_read ? '' : 'unread'}`}
+                  onClick={() => handleNotificationClick(notif)}
                   style={{
-                    borderLeft: notif.is_read ? '3px solid transparent' : '3px solid var(--primary)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: 12
+                    padding: "12px 16px",
+                    borderBottom: "1px solid var(--border-color, #eaeaea)",
+                    cursor: "pointer",
+                    backgroundColor: notif.is_read ? "transparent" : "var(--bg-app)",
+                    transition: "background 0.2s ease",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    position: "relative"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "var(--bg-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = notif.is_read ? "transparent" : "var(--bg-app)";
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <h4 className="notification-item-title" style={{ fontSize: '0.85rem', margin: '0 0 3px 0', fontWeight: 700 }}>
-                      {notif.title}
-                    </h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {!notif.is_read && (
+                        <span style={{ width: "6px", height: "6px", backgroundColor: "var(--primary, #007bff)", borderRadius: "50%", display: "inline-block" }} />
+                      )}
+                      <h4 style={{ margin: 0, fontSize: "13px", fontWeight: notif.is_read ? "600" : "800", color: "var(--text-main)" }}>
+                        {notif.title}
+                      </h4>
+                    </div>
+                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.4 }}>
                       {notif.message}
                     </p>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                      {new Date(notif.created_at).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <span style={{ fontSize: "10px", color: "var(--text-muted)", display: "block", marginTop: "6px" }}>
+                      {new Date(notif.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
                     </span>
                   </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                    {!notif.is_read && (
-                      <button
-                        onClick={(e) => handleMarkAsRead(notif.id, e)}
-                        className="btn-outline"
-                        style={{ padding: 4, borderRadius: '50%' }}
-                        title="Mark read"
-                      >
-                        <FaCheck size={8} />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => handleDelete(notif.id, e)}
-                      className="btn-outline"
-                      style={{ padding: 4, borderRadius: '50%', color: 'var(--error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
-                      title="Delete"
-                    >
-                      <FaTrash size={8} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={(e) => handleDelete(e, notif.id)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
+                      padding: "4px",
+                      opacity: 0.5,
+                      alignSelf: "center",
+                      transition: "opacity 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.target.style.opacity = 1}
+                    onMouseLeave={(e) => e.target.style.opacity = 0.5}
+                    title="Delete"
+                  >
+                    <FaTrash size={10} />
+                  </button>
                 </div>
               ))
             )}
@@ -213,5 +153,4 @@ const NotificationBell = () => {
     </div>
   );
 };
-
 export default NotificationBell;

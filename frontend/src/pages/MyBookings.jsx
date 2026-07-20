@@ -473,7 +473,10 @@ const BookingCard = ({
           </button>
 
           <button
-            onClick={() => navigate(`/chat/${b.id}`)}
+            onClick={() => {
+              // Navigates to real-time chat page powered by Socket.IO ChatContext
+              navigate(`/chat/${b.id}`);
+            }}
             className="btn-primary"
             style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
           >

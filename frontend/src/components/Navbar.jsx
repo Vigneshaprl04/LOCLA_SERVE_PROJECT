@@ -113,6 +113,10 @@ const Navbar = () => {
             {/* Mobile-only profile & logout links */}
             {menuOpen && (
               <li style={{ borderTop: '1px solid var(--border-color)', marginTop: 8, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px', color: 'var(--text-main)' }}>
+                  <span>Notifications:</span>
+                  <NotificationBell />
+                </div>
                 <button onClick={handleProfileClick} className="btn-outline" style={{ width: '100%' }}>
                   Profile Settings
                 </button>

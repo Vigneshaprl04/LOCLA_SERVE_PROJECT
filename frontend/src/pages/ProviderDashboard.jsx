@@ -645,7 +645,10 @@ const ProviderBookingCard = ({
         {getStatusActions(b)}
         
         <button
-          onClick={() => navigate(`/chat/${b.id}`)}
+          onClick={() => {
+            // Navigates to real-time chat page powered by Socket.IO ChatContext
+            navigate(`/chat/${b.id}`);
+          }}
           className="btn-outline"
           style={{ padding: '8px 16px', fontSize: 13 }}
         >

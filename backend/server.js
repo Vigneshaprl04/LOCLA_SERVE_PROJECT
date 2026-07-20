@@ -203,12 +203,14 @@ io.on("connection", (socket) => {
     // Auto-join the authenticated user's notification room
     if (socket.userId) {
         socket.join(`user_${socket.userId}`);
+        socket.join(`user:${socket.userId}`);
         console.log(`User ${socket.userId} joined notification room (auto)`);
     }
 
     socket.on("joinUser", () => {
         if (socket.userId) {
             socket.join(`user_${socket.userId}`);
+            socket.join(`user:${socket.userId}`);
             console.log(`User ${socket.userId} joined notification room (joinUser event)`);
         }
     });

@@ -1,15 +1,10 @@
-const db = require("../config/db");
+"use strict";
+
+const notificationService = require("../services/notificationService");
 
 exports.getMyNotifications = async (req, res) => {
   try {
-    const [notifications] = await db.query(
-      `SELECT *
-       FROM notifications
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [req.user.id]
-    );
-
+    const notifications = await notificationService.getNotificationsForUser(req.user.id);
     res.json({
       success: true,
       count: notifications.length,
@@ -17,32 +12,25 @@ exports.getMyNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Notifications Error:", error);
-
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Server error"
+      message: error.message || "Server error"
     });
   }
 };
 
 exports.getUnreadCount = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT COUNT(*) AS unreadCount
-       FROM notifications
-       WHERE user_id = ?
-       AND is_read = FALSE`,
-      [req.user.id]
-    );
-
+    const unreadCount = await notificationService.getUnreadCount(req.user.id);
     res.json({
       success: true,
-      unreadCount: rows[0].unreadCount
+      unreadCount
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get Unread Count Error:", error);
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Server error"
+      message: error.message || "Server error"
     });
   }
 };
@@ -50,53 +38,33 @@ exports.getUnreadCount = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { notificationId } = req.params;
-
-    const [result] = await db.query(
-      `UPDATE notifications
-       SET is_read = TRUE
-       WHERE id = ?
-       AND user_id = ?`,
-      [notificationId, req.user.id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Notification not found"
-      });
-    }
-
+    await notificationService.markNotificationAsRead(notificationId, req.user.id);
     res.json({
       success: true,
       message: "Notification marked as read"
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Mark Notification Read Error:", error);
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Server error"
+      message: error.message || "Server error"
     });
   }
 };
 
 exports.markAllAsRead = async (req, res) => {
   try {
-    const [result] = await db.query(
-      `UPDATE notifications
-       SET is_read = TRUE
-       WHERE user_id = ?
-       AND is_read = FALSE`,
-      [req.user.id]
-    );
-
+    const updatedCount = await notificationService.markAllNotificationsAsRead(req.user.id);
     res.json({
       success: true,
       message: "All notifications marked as read",
-      updatedCount: result.affectedRows
+      updatedCount
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Mark All Notifications Read Error:", error);
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Server error"
+      message: error.message || "Server error"
     });
   }
 };
@@ -104,29 +72,16 @@ exports.markAllAsRead = async (req, res) => {
 exports.deleteNotification = async (req, res) => {
   try {
     const { notificationId } = req.params;
-
-    const [result] = await db.query(
-      `DELETE FROM notifications
-       WHERE id = ?
-       AND user_id = ?`,
-      [notificationId, req.user.id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Notification not found"
-      });
-    }
-
+    await notificationService.deleteNotification(notificationId, req.user.id);
     res.json({
       success: true,
       message: "Notification deleted"
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete Notification Error:", error);
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: "Server error"
+      message: error.message || "Server error"
     });
   }
 };

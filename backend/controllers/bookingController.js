@@ -15,7 +15,7 @@ exports.createBooking = async (req, res) => {
     } = req.body;
 
     const [providers] = await db.query(
-      `SELECT id, category_id, availability_status, verification_status
+      `SELECT id, user_id, category_id, availability_status, verification_status
        FROM providers
        WHERE id = ?`,
       [provider_id]
@@ -97,6 +97,21 @@ exports.createBooking = async (req, res) => {
         null
       ]
     );
+
+    // Create real-time notification for provider
+    if (provider && provider.user_id) {
+      try {
+        await createNotification({
+          userId: provider.user_id,
+          bookingId: result.insertId,
+          title: "New Booking Request",
+          message: `You have received a new booking request #${result.insertId}`,
+          type: "BOOKING_CREATED"
+        });
+      } catch (err) {
+        console.error("Failed to trigger BOOKING_CREATED notification:", err.message);
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -293,12 +308,19 @@ exports.updateBookingStatus = async (req, res) => {
       ? `Provider submitted an estimated quote of ₹${estimatedPrice} for booking #${bookingId}`
       : `Your booking #${bookingId} status is now ${status}`;
 
+    let type = "BOOKING_STATUS_CHANGED";
+    if (status === "quoted") type = "BOOKING_QUOTED";
+    if (status === "on_the_way") type = "PROVIDER_ON_THE_WAY";
+    if (status === "work_started") type = "WORK_STARTED";
+    if (status === "completed") type = "WORK_COMPLETED";
+
     await createNotification({
       io,
       userId: bookings[0].user_id,
       title,
       message: notifMessage,
-      type: "booking_status"
+      type,
+      bookingId: Number(bookingId)
     });
 
     // Broadcast booking status change over Socket.IO
@@ -404,13 +426,15 @@ exports.updateCustomerBookingStatus = async (req, res) => {
       const message = status === "accepted"
         ? `Customer accepted your quote of ₹${booking.estimated_price} for booking #${bookingId}`
         : `Customer rejected your quote for booking #${bookingId}`;
+      const type = status === "accepted" ? "BOOKING_ACCEPTED" : "BOOKING_REJECTED";
 
       await createNotification({
         io,
         userId: providerUserId,
         title,
         message,
-        type: "booking_status"
+        type,
+        bookingId: Number(bookingId)
       });
     }
 

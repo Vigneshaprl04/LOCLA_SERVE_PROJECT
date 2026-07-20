@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPaperPlane, FaComments, FaCheckDouble, FaLink } from 'react-icons/fa';
 import { useAuth } from '../AuthContext';
+import { useChat } from '../hooks/useChat';
 import api from '../api';
 
 const ChatPage = () => {
@@ -9,11 +10,11 @@ const ChatPage = () => {
   const { user, socket } = useAuth();
   const navigate = useNavigate();
 
-  const [messages, setMessages] = useState([]);
+  const { messages, sendMessage, loading: chatLoading, error: chatError } = useChat(bookingId);
   const [bookingDetails, setBookingDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [detailsError, setDetailsError] = useState('');
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
 
   const messagesEndRef = useRef(null);
@@ -26,22 +27,12 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const markAsRead = async () => {
-    try {
-      await api.patch(`/chat/booking/${bookingId}/read`);
-    } catch (err) {
-      console.error('Failed to mark messages as read:', err);
-    }
-  };
-
+  // Load booking details on mount/update
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchBookingDetails = async () => {
       try {
-        setLoading(true);
-        setError('');
-
-        const messagesRes = await api.get(`/messages/${bookingId}`);
-        setMessages(messagesRes.data.messages || []);
+        setDetailsLoading(true);
+        setDetailsError('');
 
         const endpoint = user.role === 'provider' ? '/bookings/provider' : '/bookings/my';
         const bookingRes = await api.get(endpoint);
@@ -52,17 +43,19 @@ const ChatPage = () => {
           setBookingDetails(currentBooking);
         }
 
-        await markAsRead();
+        // Mark incoming messages as read initially
+        await api.patch(`/chat/booking/${bookingId}/read`);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load chat history');
+        setDetailsError(err.response?.data?.message || 'Failed to load booking details');
       } finally {
-        setLoading(false);
+        setDetailsLoading(false);
       }
     };
 
-    fetchData();
+    fetchBookingDetails();
   }, [bookingId, user]);
 
+  // Track socket connection state for status indicator
   useEffect(() => {
     if (!socket) {
       setSocketConnected(false);
@@ -71,59 +64,35 @@ const ChatPage = () => {
 
     setSocketConnected(socket.connected);
 
-    if (socket.connected) {
-      socket.emit('joinBooking', { bookingId: Number(bookingId) });
-    }
-
-    const onConnect = () => {
-      setSocketConnected(true);
-      socket.emit('joinBooking', { bookingId: Number(bookingId) });
-    };
-
-    const onDisconnect = () => {
-      setSocketConnected(false);
-    };
-
-    const onNewMessage = (message) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === message.id)) return prev;
-        return [...prev, message];
-      });
-      if (Number(message.sender_id) !== Number(user.id)) {
-        markAsRead();
-      }
-    };
-
-    const onChatError = (err) => {
-      setError(err.message || 'Socket error occurred');
-    };
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('newMessage', onNewMessage);
-    socket.on('chat_error', onChatError);
-
-    if (socket.connected) {
-      setSocketConnected(true);
-    }
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('newMessage', onNewMessage);
-      socket.off('chat_error', onChatError);
     };
-  }, [bookingId, user, socket]);
+  }, [socket]);
+
+  // Automatically mark incoming messages as read when they arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && Number(lastMsg.sender_id) !== Number(user.id)) {
+        api.patch(`/chat/booking/${bookingId}/read`).catch((err) => {
+          console.error('Failed to mark incoming messages as read:', err);
+        });
+      }
+    }
+  }, [messages, bookingId, user.id]);
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !socket) return;
+    if (!inputText.trim()) return;
 
-    socket.emit('sendMessage', {
-      bookingId: Number(bookingId),
-      message: inputText.trim()
-    });
-
+    sendMessage(inputText.trim());
     setInputText('');
   };
 
@@ -135,7 +104,10 @@ const ChatPage = () => {
     }
   };
 
-  if (loading) {
+  const loading = chatLoading || detailsLoading;
+  const error = chatError || detailsError;
+
+  if (loading && !bookingDetails) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 12, color: 'var(--text-muted)' }}>
         <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
