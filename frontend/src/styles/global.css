@@ -321,3 +321,14 @@ a:hover {
   border-color: rgba(15, 23, 42, 0.08);
 }
 
+:root[data-theme='light'] footer {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+}
+
+footer {
+  background-color: var(--bg-footer) !important;
+}
+
+
+
