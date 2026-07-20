@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
-import { FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { FaLock, FaEye, FaEyeSlash, FaCompass, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
+/**
+ * Redesigned Premium ResetPassword screen.
+ * Uses Framer Motion transitions and custom glass components.
+ */
 const ResetPassword = () => {
   const [form, setForm] = useState({ password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -49,15 +56,20 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="auth-split-container">
-      {/* Left Branding Pane */}
+    <motion.div 
+      className="auth-split-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Left Decorative Branding Pane */}
       <div className="auth-branding-panel">
         <div className="decor-shape decor-1"></div>
         <div className="decor-shape decor-2"></div>
         
         <div className="auth-brand-logo">
-          <FaBolt style={{ color: 'var(--accent)' }} />
-          LocalServe
+          <FaCompass style={{ fontSize: 24 }} />
+          <span>LocalServe</span>
         </div>
         
         <div className="auth-branding-content">
@@ -71,30 +83,36 @@ const ResetPassword = () => {
 
         {/* Floating Icons */}
         <div className="auth-floating-cards">
-          <div className="floating-service-chip chip-1 animate-float-slow-1">
+          <div className="floating-service-chip chip-1">
             <FaBolt style={{ color: '#fbbf24' }} /> Electrician
           </div>
-          <div className="floating-service-chip chip-2 animate-float-slow-2">
+          <div className="floating-service-chip chip-2">
             <FaWrench style={{ color: '#60a5fa' }} /> Plumber
           </div>
-          <div className="floating-service-chip chip-3 animate-float-slow-1">
+          <div className="floating-service-chip chip-3">
             <FaBroom style={{ color: '#34d399' }} /> Cleaning
           </div>
-          <div className="floating-service-chip chip-4 animate-float-slow-2">
+          <div className="floating-service-chip chip-4">
             <FaPaintRoller style={{ color: '#f472b6' }} /> Painter
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'var(--text-light)' }}>
           © 2026 LocalServe Marketplace. All rights reserved.
         </div>
       </div>
 
       {/* Right Form Pane */}
       <div className="auth-form-panel">
-        <div className="auth-card animate-fade-up">
+        <motion.div 
+          className="auth-card"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
           <div className="auth-logo-mobile">
-            <FaBolt style={{ marginRight: 8 }} /> LocalServe
+            <FaCompass style={{ fontSize: 24 }} />
+            <span>LocalServe</span>
           </div>
           
           <header className="auth-header">
@@ -103,19 +121,21 @@ const ResetPassword = () => {
           </header>
 
           {error && (
-            <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
+            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
               {error}
             </div>
           )}
 
           {!token ? (
-            <div className="alert alert-danger" style={{ textAlign: 'left' }}>
-              Reset token is missing from the URL. Please request a new reset link.
-              <div style={{ marginTop: 15 }}>
-                <Link to="/forgot-password" className="btn btn-outline" style={{ display: 'inline-block', fontSize: '0.8rem' }}>
-                  Request Reset Link
-                </Link>
-              </div>
+            <div className="alert alert-danger" style={{ textAlign: 'left', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+              <span>Reset token is missing from the URL. Please request a new reset link.</span>
+              <GlassButton
+                onClick={() => navigate('/forgot-password')}
+                variant="outline"
+                style={{ fontSize: '0.8rem', padding: '8px 12px' }}
+              >
+                Request Reset Link
+              </GlassButton>
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
@@ -177,31 +197,32 @@ const ResetPassword = () => {
 
               </div>
 
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{ width: '100%', padding: '12px', marginTop: 20 }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                    Resetting Password...
-                  </>
-                ) : 'Reset Password'}
-              </button>
+              {loading ? (
+                <div style={{ padding: '16px 0' }}>
+                  <Loader size={40} text="Resetting your password..." />
+                </div>
+              ) : (
+                <GlassButton
+                  type="submit"
+                  variant="primary"
+                  style={{ width: '100%', marginTop: 16 }}
+                  disabled={loading}
+                >
+                  Reset Password
+                </GlassButton>
+              )}
             </form>
           )}
 
           <p className="auth-footer-text">
             Back to{' '}
-            <Link to="/login" style={{ fontWeight: 700 }}>
+            <Link to="/login" style={{ fontWeight: 700, color: 'var(--accent)' }}>
               Sign In
             </Link>
           </p>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

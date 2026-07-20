@@ -1,8 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import GlassCard from "../components/ui/GlassCard";
+import GlassButton from "../components/ui/GlassButton";
+import Loader from "../components/ui/Loader";
 import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
 import { useProviderPresence } from "../hooks/useProviderPresence";
+import { motion } from "framer-motion";
+import "../styles/UserHome.css";
 
 const getCategoryIcon = (name) => {
   switch (name) {
@@ -134,52 +139,45 @@ function UserHome() {
   }, [location, searchNearby]);
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', boxSizing: 'border-box' }}>
+    <motion.div 
+      style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', boxSizing: 'border-box' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       
       {/* Hero section */}
-      <div 
-        className="card animate-fade-up" 
+      <motion.div 
+        className="card" 
         style={{ 
-          background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-          color: '#ffffff',
+          background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+          border: '1px solid var(--glass-border)',
           marginBottom: 30,
-          border: 'none',
-          textAlign: 'left'
+          textAlign: 'left',
+          padding: '40px 32px'
         }}
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
       >
-        <h1 style={{ color: '#ffffff', fontSize: '2.5rem', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em' }}>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           Local Services, Instantly Verified.
         </h1>
-        <p style={{ color: 'var(--primary-light)', fontSize: '1.05rem', margin: '0 0 20px 0', maxWidth: 640 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', margin: '0 0 24px 0', maxWidth: 640 }}>
           Find, chat with, and book certified local service professionals in your neighborhood within minutes.
         </p>
-        <button 
+        <GlassButton 
           onClick={() => navigate('/user/assistant')} 
-          className="btn-accent" 
-          style={{ 
-            backgroundColor: '#06b6d4', 
-            color: '#ffffff', 
-            border: "none",
-            padding: '10px 20px', 
-            borderRadius: 'var(--radius-sm)', 
-            fontWeight: 'bold', 
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(6, 182, 212, 0.4)',
-            transition: 'transform 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}
-          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+          variant="primary" 
+          glow={true}
         >
-          <FaRobot /> Try AI Service Assistant
-        </button>
-      </div>
+          <FaRobot style={{ fontSize: 16 }} /> Try AI Service Assistant
+        </GlassButton>
+      </motion.div>
 
       {/* Search Filter Controls Card */}
-      <div className="card animate-fade-up" style={{ padding: 20, marginBottom: 30, animationDelay: '100ms' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      <GlassCard hoverLift={false} style={{ padding: 24, marginBottom: 30 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           
           <div className="form-group" style={{ flex: '1 1 240px' }}>
             <label className="form-label">Search Radius</label>
@@ -201,154 +199,189 @@ function UserHome() {
           </div>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={() => searchNearby()} className="btn-primary">
+            <GlassButton onClick={() => searchNearby(location)} variant="primary">
               Search Providers
-            </button>
-            <button onClick={getLocation} className="btn-outline">
+            </GlassButton>
+            <GlassButton onClick={getLocation} variant="secondary">
               <FaMapMarkerAlt /> Refresh Location
-            </button>
+            </GlassButton>
           </div>
 
         </div>
 
         {location && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: 14 }}>
-            <FaMapMarkerAlt style={{ color: 'var(--primary)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-light)', marginTop: 16 }}>
+            <FaMapMarkerAlt style={{ color: 'var(--accent)' }} />
             <span>Active Coordinates: <strong>{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</strong></span>
           </div>
         )}
-      </div>
+      </GlassCard>
 
       {message && (
-        <div className="alert alert-danger animate-shake" style={{ marginBottom: 24 }}>
+        <div className="alert alert-danger" style={{ marginBottom: 24 }}>
           {message}
         </div>
       )}
 
       {/* Service Categories Grid */}
       <div style={{ textAlign: 'left', marginBottom: 20 }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
           Browse Service Categories
         </h2>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
           Select a category to filter local service professionals
         </p>
       </div>
 
-      <div className="category-grid animate-fade-up" style={{ animationDelay: '200ms', marginBottom: 30 }}>
+      <motion.div 
+        className="category-grid" 
+        style={{ marginBottom: 40 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
         {categories.map((cat) => (
-          <div
+          <motion.div
             key={cat.id}
             className={`category-card ${categoryId === cat.id ? 'active' : ''}`}
             onClick={() => setCategoryId(cat.id)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
           >
             <div className="category-icon-container">
               {getCategoryIcon(cat.name)}
             </div>
             <span className="category-label">{cat.name}</span>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Section Divider */}
       <div style={{ textAlign: 'left', marginBottom: 20 }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
           Nearby Providers
         </h2>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
           Showing providers based on selected radius and category filters
         </p>
       </div>
 
       {/* Loading Skeletons */}
       {loading ? (
-        <div className="provider-grid">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="skeleton-card">
-              <div className="skeleton skeleton-title"></div>
-              <div className="skeleton skeleton-text" style={{ width: '80%' }}></div>
-              <div className="skeleton skeleton-text" style={{ width: '60%' }}></div>
-              <div className="skeleton skeleton-text" style={{ width: '40%' }}></div>
-            </div>
-          ))}
+        <div style={{ padding: '60px 0' }}>
+          <Loader size={50} text="Locating nearby service professionals..." />
         </div>
       ) : providers.length === 0 ? (
-        <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
+        <GlassCard hoverLift={false} style={{ padding: '60px 20px', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.95rem' }}>
             No nearby service providers matched your search parameters. Try expanding your search radius.
           </p>
-        </div>
+        </GlassCard>
       ) : (
         /* Providers grid cards */
-        <section className="provider-grid">
-          {providers.map((provider, index) => (
+        <motion.section 
+          className="provider-grid"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: 0.05
+              }
+            }
+          }}
+        >
+          {providers.map((provider) => (
             <ProviderCard
               key={provider.provider_id}
               provider={provider}
-              index={index}
               navigate={navigate}
             />
           ))}
-        </section>
+        </motion.section>
       )}
 
-    </div>
+    </motion.div>
   );
 }
 
-function ProviderCard({ provider, index, navigate }) {
+function ProviderCard({ provider, navigate }) {
   const isOnline = useProviderPresence(provider.provider_id, provider.availability_status);
 
   return (
-    <article
-      className="provider-card card-lift animate-fade-up"
-      style={{ animationDelay: `${index * 50}ms` }}
-      key={provider.provider_id}
+    <motion.div
+      variants={{
+        hidden: { y: 15, opacity: 0 },
+        show: { y: 0, opacity: 1, transition: { duration: 0.3 } }
+      }}
     >
-      <div>
-        <div className="provider-card-header" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <span className="badge badge-accent">
-            {provider.category_name}
-          </span>
-          <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <FaMapMarkerAlt size={10} /> {Number(provider.distance_km).toFixed(1)} KM
-          </span>
-          <span className={`badge ${isOnline ? 'badge-success' : 'badge-danger'}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {isOnline ? "🟢 Online" : "🔴 Offline"}
-          </span>
+      <GlassCard className="provider-card" glow={isOnline}>
+        <div>
+          <div className="provider-card-header" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <span className="badge badge-accent">
+              {provider.category_name}
+            </span>
+            <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <FaMapMarkerAlt size={10} /> {Number(provider.distance_km).toFixed(1)} KM
+            </span>
+            <span className={isOnline ? 'badge-success badge' : 'badge-danger badge'} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '6px', 
+                height: '6px', 
+                borderRadius: '50%', 
+                backgroundColor: isOnline ? 'var(--success)' : 'var(--error)',
+                boxShadow: isOnline ? '0 0 8px var(--success)' : 'none'
+              }} />
+              {isOnline ? "Online" : "Offline"}
+            </span>
+          </div>
+
+          <h3 className="provider-name">
+            <span>{provider.name}</span>
+            {provider.verification_status === 'verified' && (
+              <span style={{ 
+                color: 'var(--accent)', 
+                fontSize: '0.8rem', 
+                fontWeight: 700, 
+                border: '1px solid rgba(6, 182, 212, 0.3)', 
+                padding: '2px 8px', 
+                borderRadius: 'var(--radius-full)', 
+                backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase'
+              }}>
+                Verified
+              </span>
+            )}
+          </h3>
+
+          <div className="provider-details-row">
+            <div className="provider-meta-item">
+              <FaStar color="#f59e0b" />
+              <strong>{Number(provider.average_rating || 0).toFixed(1)}</strong>
+            </div>
+            <div className="provider-meta-item">
+              <FaBriefcase />
+              <span>{provider.experience} Yrs Exp</span>
+            </div>
+          </div>
+
+          <p className="provider-description">
+            {provider.description || 'No description provided. Connect with them to learn details.'}
+          </p>
         </div>
 
-        <h3 className="provider-name">
-          {provider.name}
-          {provider.verification_status === 'verified' && (
-            <span style={{ color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 600, marginLeft: 6 }}>✓ Verified</span>
-          )}
-        </h3>
-
-        <div className="provider-details-row">
-          <div className="provider-meta-item">
-            <FaStar color="#f59e0b" />
-            <strong>{Number(provider.average_rating || 0).toFixed(1)}</strong>
-          </div>
-          <div className="provider-meta-item">
-            <FaBriefcase />
-            <span>{provider.experience} Yrs Exp</span>
-          </div>
-        </div>
-
-        <p className="provider-description">
-          {provider.description || 'No description provided. Connect with them to learn details.'}
-        </p>
-      </div>
-
-      <button
-        onClick={() => navigate(`/providers/${provider.provider_id}`)}
-        className="btn-primary"
-        style={{ width: '100%', marginTop: 8 }}
-      >
-        View Profile & Book
-      </button>
-    </article>
+        <GlassButton
+          onClick={() => navigate(`/providers/${provider.provider_id}`)}
+          variant="primary"
+          style={{ width: '100%', marginTop: 12 }}
+        >
+          View Profile & Book
+        </GlassButton>
+      </GlassCard>
+    </motion.div>
   );
 }
 

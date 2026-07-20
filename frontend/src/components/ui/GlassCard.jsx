@@ -22,7 +22,7 @@ const GlassCard = ({
         border: "1px solid var(--glass-border)",
         borderRadius: "var(--radius-lg)",
         padding: "var(--space-3)",
-        boxShadow: var(--shadow-md),
+        boxShadow: "var(--shadow-md)",
         boxSizing: "border-box",
         position: "relative",
         overflow: "hidden",

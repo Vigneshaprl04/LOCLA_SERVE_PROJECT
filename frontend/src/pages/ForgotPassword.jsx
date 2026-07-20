@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { FaEnvelope, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { FaEnvelope, FaCompass, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
+/**
+ * Redesigned Premium ForgotPassword screen.
+ * Uses Framer Motion transitions and custom glass components.
+ */
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -27,15 +34,20 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="auth-split-container">
+    <motion.div 
+      className="auth-split-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Left Decorative Branding Panel */}
       <div className="auth-branding-panel">
         <div className="decor-shape decor-1"></div>
         <div className="decor-shape decor-2"></div>
         
         <div className="auth-brand-logo">
-          <FaBolt style={{ color: 'var(--accent)' }} />
-          LocalServe
+          <FaCompass style={{ fontSize: 24 }} />
+          <span>LocalServe</span>
         </div>
         
         <div className="auth-branding-content">
@@ -49,30 +61,36 @@ const ForgotPassword = () => {
 
         {/* Floating Abstract Chips */}
         <div className="auth-floating-cards">
-          <div className="floating-service-chip chip-1 animate-float-slow-1">
+          <div className="floating-service-chip chip-1">
             <FaBolt style={{ color: '#fbbf24' }} /> Electrician
           </div>
-          <div className="floating-service-chip chip-2 animate-float-slow-2">
+          <div className="floating-service-chip chip-2">
             <FaWrench style={{ color: '#60a5fa' }} /> Plumber
           </div>
-          <div className="floating-service-chip chip-3 animate-float-slow-1">
+          <div className="floating-service-chip chip-3">
             <FaBroom style={{ color: '#34d399' }} /> Cleaning
           </div>
-          <div className="floating-service-chip chip-4 animate-float-slow-2">
+          <div className="floating-service-chip chip-4">
             <FaPaintRoller style={{ color: '#f472b6' }} /> Painter
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'var(--text-light)' }}>
           © 2026 LocalServe Marketplace. All rights reserved.
         </div>
       </div>
 
       {/* Right Form Panel */}
       <div className="auth-form-panel">
-        <div className="auth-card animate-fade-up">
+        <motion.div 
+          className="auth-card"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
           <div className="auth-logo-mobile">
-            <FaBolt style={{ marginRight: 8 }} /> LocalServe
+            <FaCompass style={{ fontSize: 24 }} />
+            <span>LocalServe</span>
           </div>
           
           <header className="auth-header">
@@ -87,7 +105,7 @@ const ForgotPassword = () => {
           )}
 
           {error && (
-            <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
+            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
               {error}
             </div>
           )}
@@ -115,30 +133,31 @@ const ForgotPassword = () => {
 
             </div>
 
-            <button
-              type="submit"
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px', marginTop: 20 }}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                  Sending Link...
-                </>
-              ) : 'Send Reset Instructions'}
-            </button>
+            {loading ? (
+              <div style={{ padding: '16px 0' }}>
+                <Loader size={40} text="Sending reset details..." />
+              </div>
+            ) : (
+              <GlassButton
+                type="submit"
+                variant="primary"
+                style={{ width: '100%', marginTop: 16 }}
+                disabled={loading}
+              >
+                Send Reset Instructions
+              </GlassButton>
+            )}
           </form>
 
           <p className="auth-footer-text">
             Remembered your password?{' '}
-            <Link to="/login" style={{ fontWeight: 700 }}>
+            <Link to="/login" style={{ fontWeight: 700, color: 'var(--accent)' }}>
               Sign In
             </Link>
           </p>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

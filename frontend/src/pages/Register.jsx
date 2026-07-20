@@ -2,8 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller, FaBriefcase, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash, FaCompass, FaBolt, FaWrench, FaBroom, FaPaintRoller, FaBriefcase, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * Redesigned Premium Registration screen.
+ * Uses Framer Motion transitions and custom glass components.
+ */
 const Register = () => {
   const [categories, setCategories] = useState([]);
   
@@ -38,7 +45,7 @@ const Register = () => {
   const [resendError, setResendError] = useState('');
   const [redirectTimerActive, setRedirectTimerActive] = useState(true);
 
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   // Redirection countdown effect
@@ -171,8 +178,8 @@ const Register = () => {
           <div className="decor-shape decor-1"></div>
           <div className="decor-shape decor-2"></div>
           <div className="auth-brand-logo">
-            <FaBolt style={{ color: 'var(--accent)' }} />
-            LocalServe
+            <FaCompass style={{ fontSize: 24 }} />
+            <span>LocalServe</span>
           </div>
           <div className="auth-branding-content">
             <h1 className="auth-branding-title">Account Created Successfully!</h1>
@@ -183,61 +190,76 @@ const Register = () => {
         </div>
 
         {/* Right Content Panel */}
-        <div className="auth-form-panel" style={{ padding: '40px var(--space-4)' }}>
-          <div className="auth-card animate-scale" style={{ maxWidth: '540px', textAlign: 'center', padding: '40px' }}>
+        <div className="auth-form-panel" style={{ padding: '40px var(--space-2)' }}>
+          <motion.div 
+            className="auth-card" 
+            style={{ maxWidth: '540px' }}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             <div style={{ marginBottom: '24px' }}>
-              <div className="success-checkmark-wrapper" style={{ fontSize: '4rem', color: '#10b981', display: 'inline-block', animation: 'scaleIn 0.5s ease-out' }}>
+              <motion.div 
+                style={{ fontSize: '4.5rem', color: 'var(--success)', display: 'inline-block' }}
+                animate={{ scale: [0.8, 1.1, 1], rotate: [0, 10, 0] }}
+                transition={{ duration: 0.5 }}
+              >
                 <FaCheckCircle />
-              </div>
+              </motion.div>
             </div>
             
-            <h2 className="auth-card-title" style={{ color: '#10b981', marginBottom: '12px' }}>
+            <h2 className="auth-card-title" style={{ color: 'var(--success)', marginBottom: '12px', textAlign: 'center' }}>
               Account Created Successfully
             </h2>
             
-            <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)', textAlign: 'left' }}>
               <p style={{ margin: '0 0 8px 0', color: 'var(--text-muted)' }}>Welcome aboard! Your account has been created for:</p>
-              <strong style={{ fontSize: '1.1rem', color: 'var(--text)' }}>{registeredEmail}</strong>
+              <strong style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>{registeredEmail}</strong>
               <p style={{ margin: '12px 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                 You can log in to your account immediately.
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '24px' }}>
+            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '24px' }}>
               {redirectTimerActive ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: 16 }}>
                   <span>Redirecting to Login in {countdown}...</span>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255, 255, 255, 0.2)', borderTopColor: 'var(--accent)', animation: 'shimmer 1s linear infinite' }} />
                 </div>
               ) : (
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Auto-redirect paused.</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.95rem', display: 'block', marginBottom: 16 }}>Auto-redirect paused.</span>
               )}
 
-              <button
+              <GlassButton
                 type="button"
                 onClick={() => navigate('/login')}
-                className="btn-primary"
-                style={{ width: '100%', padding: '12px', marginTop: '16px' }}
+                variant="primary"
+                style={{ width: '100%' }}
               >
                 Go to Login Now
-              </button>
+              </GlassButton>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="auth-split-container">
+    <motion.div 
+      className="auth-split-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Left Branding Panel */}
       <div className="auth-branding-panel">
         <div className="decor-shape decor-1"></div>
         <div className="decor-shape decor-2"></div>
         
         <div className="auth-brand-logo">
-          <FaBolt style={{ color: 'var(--accent)' }} />
-          LocalServe
+          <FaCompass style={{ fontSize: 24 }} />
+          <span>LocalServe</span>
         </div>
         
         <div className="auth-branding-content">
@@ -251,30 +273,37 @@ const Register = () => {
 
         {/* Floating Abstract Cards */}
         <div className="auth-floating-cards">
-          <div className="floating-service-chip chip-1 animate-float-slow-1">
+          <div className="floating-service-chip chip-1">
             <FaBolt style={{ color: '#fbbf24' }} /> Electrician
           </div>
-          <div className="floating-service-chip chip-2 animate-float-slow-2">
+          <div className="floating-service-chip chip-2">
             <FaWrench style={{ color: '#60a5fa' }} /> Plumber
           </div>
-          <div className="floating-service-chip chip-3 animate-float-slow-1">
+          <div className="floating-service-chip chip-3">
             <FaBroom style={{ color: '#34d399' }} /> Cleaning
           </div>
-          <div className="floating-service-chip chip-4 animate-float-slow-2">
+          <div className="floating-service-chip chip-4">
             <FaPaintRoller style={{ color: '#f472b6' }} /> Painter
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'var(--text-light)' }}>
           © 2026 LocalServe Marketplace. All rights reserved.
         </div>
       </div>
 
       {/* Right Form Panel */}
-      <div className="auth-form-panel" style={{ padding: '40px var(--space-4)' }}>
-        <div className="auth-card animate-fade-up" style={{ maxWidth: '540px' }}>
+      <div className="auth-form-panel" style={{ padding: '40px var(--space-1)' }}>
+        <motion.div 
+          className="auth-card" 
+          style={{ maxWidth: '540px' }}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
           <div className="auth-logo-mobile">
-            <FaBolt style={{ marginRight: 8 }} /> LocalServe
+            <FaCompass style={{ fontSize: 24 }} />
+            <span>LocalServe</span>
           </div>
           
           <header className="auth-header">
@@ -283,7 +312,7 @@ const Register = () => {
           </header>
 
           {error && (
-            <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
+            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
               {error}
             </div>
           )}
@@ -295,7 +324,7 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
               
               {/* Responsive Name and Email row */}
               <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -405,158 +434,167 @@ const Register = () => {
               </div>
 
               {/* Provider details sub-grid */}
-              {form.role === 'provider' && (
-                <div className="animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, borderBottom: '1px dashed var(--border-color)', paddingBottom: 6, margin: '10px 0 0 0', textAlign: 'left' }}>
-                    Service Specifications
-                  </h3>
+              <AnimatePresence>
+                {form.role === 'provider' && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10, overflow: 'hidden' }}
+                  >
+                    <h3 style={{ fontSize: 15, fontWeight: 700, borderBottom: '1px dashed var(--glass-border)', paddingBottom: 6, margin: '10px 0 0 0', textAlign: 'left', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+                      Service Specifications
+                    </h3>
 
-                  <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                    <div className="form-group">
-                      <label className="form-label">Service Category *</label>
-                      <div className="input-icon-group">
-                        <select
-                          name="category_id"
-                          value={form.category_id}
-                          onChange={handleChange}
-                          className="form-control"
-                          disabled={loading}
-                          required
-                        >
-                          <option value="">Select Category</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="input-icon">
-                          <FaBriefcase />
-                        </span>
+                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                      <div className="form-group">
+                        <label className="form-label">Service Category *</label>
+                        <div className="input-icon-group">
+                          <select
+                            name="category_id"
+                            value={form.category_id}
+                            onChange={handleChange}
+                            className="form-control"
+                            disabled={loading}
+                            required={form.role === 'provider'}
+                          >
+                            <option value="">Select Category</option>
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="input-icon">
+                            <FaBriefcase />
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Experience (Years) *</label>
+                        <div className="input-icon-group">
+                          <input
+                            name="experience"
+                            type="number"
+                            min="0"
+                            placeholder="e.g. 5"
+                            value={form.experience}
+                            onChange={handleChange}
+                            className="form-control"
+                            disabled={loading}
+                            required={form.role === 'provider'}
+                          />
+                          <span className="input-icon">
+                            <FaBriefcase />
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">Experience (Years) *</label>
-                      <div className="input-icon-group">
-                        <input
-                          name="experience"
-                          type="number"
-                          min="0"
-                          placeholder="e.g. 5"
-                          value={form.experience}
-                          onChange={handleChange}
-                          className="form-control"
-                          disabled={loading}
-                          required
-                        />
-                        <span className="input-icon">
-                          <FaBriefcase />
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Service Description</label>
-                    <textarea
-                      name="description"
-                      placeholder="Briefly describe your service expertise and credentials..."
-                      value={form.description}
-                      onChange={handleChange}
-                      rows={2}
-                      className="form-control"
-                      disabled={loading}
-                      style={{ resize: 'none', height: '60px' }}
-                    />
-                  </div>
-
-                  <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-                    <div className="form-group">
-                      <label className="form-label">Working Area *</label>
-                      <div className="input-icon-group">
-                        <input
-                          name="working_area"
-                          placeholder="Locality"
-                          value={form.working_area}
-                          onChange={handleChange}
-                          className="form-control"
-                          disabled={loading}
-                          required
-                        />
-                        <span className="input-icon">
-                          <FaMapMarkerAlt />
-                        </span>
-                      </div>
+                      <label className="form-label">Service Description</label>
+                      <textarea
+                        name="description"
+                        placeholder="Briefly describe your service expertise and credentials..."
+                        value={form.description}
+                        onChange={handleChange}
+                        rows={2}
+                        className="form-control"
+                        disabled={loading}
+                        style={{ resize: 'none', height: '60px' }}
+                      />
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">City *</label>
-                      <div className="input-icon-group">
-                        <input
-                          name="city"
-                          placeholder="City"
-                          value={form.city}
-                          onChange={handleChange}
-                          className="form-control"
-                          disabled={loading}
-                          required
-                        />
-                        <span className="input-icon">
-                          <FaMapMarkerAlt />
-                        </span>
+                    <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                      <div className="form-group">
+                        <label className="form-label">Working Area *</label>
+                        <div className="input-icon-group">
+                          <input
+                            name="working_area"
+                            placeholder="Locality"
+                            value={form.working_area}
+                            onChange={handleChange}
+                            className="form-control"
+                            disabled={loading}
+                            required={form.role === 'provider'}
+                          />
+                          <span className="input-icon">
+                            <FaMapMarkerAlt />
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">City *</label>
+                        <div className="input-icon-group">
+                          <input
+                            name="city"
+                            placeholder="City"
+                            value={form.city}
+                            onChange={handleChange}
+                            className="form-control"
+                            disabled={loading}
+                            required={form.role === 'provider'}
+                          />
+                          <span className="input-icon">
+                            <FaMapMarkerAlt />
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">PIN Code *</label>
+                        <div className="input-icon-group">
+                          <input
+                            name="pincode"
+                            placeholder="639001"
+                            value={form.pincode}
+                            onChange={handleChange}
+                            className="form-control"
+                            disabled={loading}
+                            required={form.role === 'provider'}
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                          />
+                          <span className="input-icon">
+                            <FaMapMarkerAlt />
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="form-group">
-                      <label className="form-label">PIN Code *</label>
-                      <div className="input-icon-group">
-                        <input
-                          name="pincode"
-                          placeholder="639001"
-                          value={form.pincode}
-                          onChange={handleChange}
-                          className="form-control"
-                          disabled={loading}
-                          required
-                          pattern="[0-9]{6}"
-                          maxLength={6}
-                        />
-                        <span className="input-icon">
-                          <FaMapMarkerAlt />
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px', marginTop: 10 }}
-            >
-              {loading ? (
-                <>
-                  <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                  Creating Account...
-                </>
-              ) : 'Register'}
-            </button>
+            {loading ? (
+              <div style={{ padding: '16px 0' }}>
+                <Loader size={40} text="Registering your account..." />
+              </div>
+            ) : (
+              <GlassButton
+                type="submit"
+                variant="primary"
+                style={{ width: '100%' }}
+                disabled={loading}
+              >
+                Register
+              </GlassButton>
+            )}
           </form>
 
           <p className="auth-footer-text">
             Already have an account?{' '}
-            <Link to="/login" style={{ fontWeight: 700 }}>
+            <Link to="/login" style={{ fontWeight: 700, color: 'var(--accent)' }}>
               Sign In
             </Link>
           </p>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

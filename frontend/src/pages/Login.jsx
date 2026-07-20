@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import api from '../api';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaCompass, FaBolt, FaWrench, FaBroom, FaPaintRoller } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
+/**
+ * Redesigned Premium Login screen.
+ * Uses Framer Motion transitions and custom glass components.
+ */
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -83,15 +91,20 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-split-container">
+    <motion.div 
+      className="auth-split-container"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Left Decorative Branding Panel */}
       <div className="auth-branding-panel">
         <div className="decor-shape decor-1"></div>
         <div className="decor-shape decor-2"></div>
         
         <div className="auth-brand-logo">
-          <FaBolt style={{ color: 'var(--accent)' }} />
-          LocalServe
+          <FaCompass style={{ fontSize: 24 }} />
+          <span>LocalServe</span>
         </div>
         
         <div className="auth-branding-content">
@@ -105,31 +118,37 @@ const Login = () => {
 
         {/* Floating Abstract Cards */}
         <div className="auth-floating-cards">
-          <div className="floating-service-chip chip-1 animate-float-slow-1">
+          <div className="floating-service-chip chip-1">
             <FaBolt style={{ color: '#fbbf24' }} /> Electrician
           </div>
-          <div className="floating-service-chip chip-2 animate-float-slow-2">
+          <div className="floating-service-chip chip-2">
             <FaWrench style={{ color: '#60a5fa' }} /> Plumber
           </div>
-          <div className="floating-service-chip chip-3 animate-float-slow-1">
+          <div className="floating-service-chip chip-3">
             <FaBroom style={{ color: '#34d399' }} /> Cleaning
           </div>
-          <div className="floating-service-chip chip-4 animate-float-slow-2">
+          <div className="floating-service-chip chip-4">
             <FaPaintRoller style={{ color: '#f472b6' }} /> Painter
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <div style={{ position: 'relative', zIndex: 5, fontSize: '0.85rem', color: 'var(--text-light)' }}>
           © 2026 LocalServe Marketplace. All rights reserved.
         </div>
       </div>
 
       {/* Right Authentication Form Panel */}
       <div className="auth-form-panel">
-        <div className="auth-card animate-fade-up">
+        <motion.div 
+          className="auth-card"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
           {/* Logo only shown on mobile screen sizes */}
           <div className="auth-logo-mobile">
-            <FaBolt style={{ marginRight: 8 }} /> LocalServe
+            <FaCompass style={{ fontSize: 24 }} />
+            <span>LocalServe</span>
           </div>
           
           <header className="auth-header">
@@ -144,12 +163,36 @@ const Login = () => {
           )}
 
           {error && (
-            <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
+            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
               {error}
             </div>
           )}
 
-
+          {isUnverified && (
+            <div className="alert alert-danger" style={{ marginBottom: 20, flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
+              <p style={{ margin: 0, color: '#fca5a5', fontSize: '0.85rem', textAlign: 'left' }}>
+                Your account email is unverified. Please check your inbox or request a new verification link below.
+              </p>
+              {resendMessage && (
+                <p style={{ margin: 0, color: '#86efac', fontSize: '0.85rem', textAlign: 'left' }}>
+                  {resendMessage}
+                </p>
+              )}
+              {resendError && (
+                <p style={{ margin: 0, color: '#fca5a5', fontSize: '0.85rem', textAlign: 'left' }}>
+                  {resendError}
+                </p>
+              )}
+              <GlassButton
+                onClick={handleResendVerification}
+                variant="secondary"
+                disabled={resendLoading || resendCooldown > 0}
+                style={{ padding: '8px 12px', fontSize: '0.8rem' }}
+              >
+                {resendLoading ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Verification Link'}
+              </GlassButton>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="auth-form-grid">
@@ -177,7 +220,7 @@ const Login = () => {
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="form-label">Password</label>
-                  <Link to="/forgot-password" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>
+                  <Link to="/forgot-password" style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--accent)' }}>
                     Forgot Password?
                   </Link>
                 </div>
@@ -207,30 +250,31 @@ const Login = () => {
 
             </div>
 
-            <button
-              type="submit"
-              className="btn-primary"
-              style={{ width: '100%', padding: '12px', marginTop: 10 }}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span className="animate-spin" style={{ display: 'inline-block', marginRight: 8 }}>🌀</span>
-                  Signing In...
-                </>
-              ) : 'Sign In'}
-            </button>
+            {loading ? (
+              <div style={{ padding: '20px 0' }}>
+                <Loader size={40} text="Signing you in safely..." />
+              </div>
+            ) : (
+              <GlassButton
+                type="submit"
+                variant="primary"
+                style={{ width: '100%', marginTop: 16 }}
+                disabled={loading}
+              >
+                Sign In
+              </GlassButton>
+            )}
           </form>
 
           <p className="auth-footer-text">
             Don&apos;t have an account?{' '}
-            <Link to="/register" style={{ fontWeight: 700 }}>
+            <Link to="/register" style={{ fontWeight: 700, color: 'var(--accent)' }}>
               Register Now
             </Link>
           </p>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
