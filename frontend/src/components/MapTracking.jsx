@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
 import Loader from './ui/Loader';
 import GlassCard from './ui/GlassCard';
-import { FaLocationArrow, FaPlus, FaMinus, FaCompass, FaExclamationTriangle } from 'react-icons/fa';
+import { FaLocationArrow, FaPlus, FaMinus, FaCompass, FaExclamationTriangle, FaRoute } from 'react-icons/fa';
 
 /**
  * Premium, native Google Maps tracking component.
  * Avoids React 19 package peer-dependency issues by loading script directly.
- * Handles permissions, customer & provider markers, recentring, zoom, and live socket streams.
+ * Handles permissions, customer & provider markers, route polylines, ETA, and live socket streams.
  */
 const MapTracking = ({
   bookingId,
@@ -23,6 +23,11 @@ const MapTracking = ({
   // Track provider marker and coords in state
   const [providerMarker, setProviderMarker] = useState(null);
   const [liveProviderCoords, setLiveProviderCoords] = useState(null);
+
+  // Directions and Route States
+  const [distance, setDistance] = useState('');
+  const [eta, setEta] = useState('');
+  const directionsRendererRef = useRef(null);
 
   // States
   const [customerLocation, setCustomerLocation] = useState(null);
@@ -213,10 +218,8 @@ const MapTracking = ({
     if (!mapInstance || !liveProviderCoords || !window.google) return;
 
     if (providerMarker) {
-      // Move existing marker smoothly
       providerMarker.setPosition(liveProviderCoords);
     } else {
-      // Create new provider marker (red neon arrow)
       const marker = new window.google.maps.Marker({
         position: liveProviderCoords,
         map: mapInstance,
@@ -232,7 +235,6 @@ const MapTracking = ({
       });
       setProviderMarker(marker);
 
-      // Auto-fit bounds on first load
       const bounds = new window.google.maps.LatLngBounds();
       bounds.extend(customerLocation);
       bounds.extend(liveProviderCoords);
@@ -240,15 +242,56 @@ const MapTracking = ({
     }
   }, [mapInstance, liveProviderCoords, customerLocation, providerMarker]);
 
-  // Clean up markers on unmount
+  // 5. Calculate and draw polyline route + ETA + Distance
+  useEffect(() => {
+    if (!mapInstance || !customerLocation || !liveProviderCoords || !window.google) return;
+
+    // Initialize DirectionsRenderer if not created
+    if (!directionsRendererRef.current) {
+      directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+        map: mapInstance,
+        suppressMarkers: true, // Keep our neon custom markers
+        polylineOptions: {
+          strokeColor: '#8b5cf6', // Premium Indigo/Purple polyline path
+          strokeOpacity: 0.85,
+          strokeWeight: 5
+        }
+      });
+    }
+
+    const directionsService = new window.google.maps.DirectionsService();
+    directionsService.route(
+      {
+        origin: liveProviderCoords,
+        destination: customerLocation,
+        travelMode: window.google.maps.TravelMode.DRIVING
+      },
+      (result, status) => {
+        if (status === window.google.maps.DirectionsStatus.OK && result) {
+          directionsRendererRef.current.setDirections(result);
+          const leg = result.routes[0].legs[0];
+          setDistance(leg.distance.text);
+          setEta(leg.duration.text);
+        } else {
+          console.warn("Directions API lookup error: " + status);
+        }
+      }
+    );
+  }, [mapInstance, customerLocation, liveProviderCoords]);
+
+  // Clean up markers and renderers on unmount
   useEffect(() => {
     return () => {
       if (customerMarker) customerMarker.setMap(null);
       if (providerMarker) providerMarker.setMap(null);
+      if (directionsRendererRef.current) {
+        directionsRendererRef.current.setMap(null);
+        directionsRendererRef.current = null;
+      }
     };
   }, [customerMarker, providerMarker]);
 
-  // 5. Render Map canvas or fallbacks
+  // 6. Render Map canvas or fallbacks
   if (loading) {
     return (
       <div style={{ display: 'flex', minHeight: '300px', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
@@ -317,11 +360,18 @@ const MapTracking = ({
       </div>
 
       {/* Live status bar details overlay */}
-      <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, background: 'rgba(10, 15, 30, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: liveProviderCoords ? 'var(--success)' : 'var(--warning)', display: 'inline-block', boxShadow: liveProviderCoords ? '0 0 8px var(--success-glow)' : 'none' }}></span>
-        <span style={{ color: '#ffffff', fontSize: '0.78rem', fontWeight: 600 }}>
-          {liveProviderCoords ? 'Partner Live Tracking Active' : 'Waiting for partner location...'}
-        </span>
+      <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, background: 'rgba(10, 15, 30, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', pointerEvents: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: liveProviderCoords ? 'var(--success)' : 'var(--warning)', display: 'inline-block', boxShadow: liveProviderCoords ? '0 0 8px var(--success-glow)' : 'none' }}></span>
+          <span style={{ color: '#ffffff', fontSize: '0.78rem', fontWeight: 700 }}>
+            {liveProviderCoords ? 'Live Tracking Active' : 'Waiting for partner location...'}
+          </span>
+        </div>
+        {liveProviderCoords && distance && eta && (
+          <p style={{ margin: 0, fontSize: '0.74rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FaRoute style={{ color: '#a78bfa' }} /> Distance: <strong>{distance}</strong> &bull; ETA: <strong>{eta}</strong>
+          </p>
+        )}
       </div>
     </div>
   );
