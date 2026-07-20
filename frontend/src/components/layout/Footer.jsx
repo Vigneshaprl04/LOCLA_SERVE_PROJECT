@@ -8,13 +8,14 @@ const Footer = () => {
   return (
     <footer style={{
       borderTop: "1px solid var(--glass-border)",
-      background: "rgba(5, 8, 22, 0.4)",
+      background: "var(--bg-footer)",
       backdropFilter: "var(--glass-blur)",
       padding: "64px 0 32px 0",
       marginTop: "auto",
       color: "var(--text-muted)",
       boxSizing: "border-box"
     }}>
+
       <div className="container">
         <div style={{
           display: "grid",
