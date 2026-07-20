@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { FaWrench, FaCalendarAlt, FaMoneyBillWave, FaComments, FaCreditCard, FaStar, FaExclamationCircle } from 'react-icons/fa';
+import { BookingContext } from '../context/BookingContext';
+import { useBookingStatus } from '../hooks/useBookingStatus';
 
 const MyBookings = () => {
   const navigate = useNavigate();
+  const { updateBookingLocalStatus } = useContext(BookingContext);
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +32,16 @@ const MyBookings = () => {
       setError('');
 
       const response = await api.get('/bookings/my');
-      setBookings(response.data.bookings || []);
+      const bookingsList = response.data.bookings || [];
+      setBookings(bookingsList);
+
+      // Pre-populate BookingContext
+      bookingsList.forEach((booking) => {
+        updateBookingLocalStatus(booking.id, {
+          status: booking.booking_status,
+          updatedAt: booking.updated_at || booking.created_at
+        });
+      });
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to fetch bookings');
     } finally {
@@ -184,157 +196,18 @@ const MyBookings = () => {
       ) : (
         <div className="booking-grid">
           {bookings.map((booking, index) => (
-            <article
+            <BookingCard
               key={booking.id}
-              className="booking-card card-lift animate-fade-up"
-              style={{ 
-                animationDelay: `${index * 60}ms`,
-                borderLeft: `4px solid ${
-                  booking.booking_status === 'completed' ? 'var(--success)' : 
-                  booking.booking_status === 'cancelled' || booking.booking_status === 'rejected' ? 'var(--error)' :
-                  'var(--primary)'
-                }`
-              }}
-            >
-              
-              {/* Column 1: Provider Details & Status Badges */}
-              <div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                  <span className={`badge ${getStatusBadgeClass(booking.booking_status)}`}>
-                    {getNextStatusText(booking.booking_status)}
-                  </span>
-                  <span className={`badge ${booking.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>
-                    Payment: {(booking.payment_status || 'pending').toUpperCase()}
-                  </span>
-                </div>
-                
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
-                  Booking #{booking.id}
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
-                  Specialist: <strong>{booking.provider_name}</strong> &bull; {booking.category_name}
-                </p>
-              </div>
-
-              {/* Column 2: Problem detail & address schedule */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div>
-                  <span className="booking-info-label">Problem details</span>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', margin: '2px 0 0 0', lineHeight: 1.4 }}>
-                    {booking.service_description}
-                  </p>
-                </div>
-                <div>
-                  <span className="booking-info-label">Schedule & Address</span>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                    <FaCalendarAlt style={{ marginRight: 4, color: 'var(--primary)' }} />
-                    {booking.preferred_date ? new Date(booking.preferred_date).toLocaleString() : 'Not specified'}
-                  </p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: '2px 0 0 0' }}>
-                    {booking.service_address}
-                  </p>
-                </div>
-              </div>
-
-              {/* Column 3: Amount details and Action button loops */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
-                <div>
-                  <span className="booking-info-label">Estimated Bill</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
-                    {booking.booking_status === 'pending' ? (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Waiting for provider response
-                      </span>
-                    ) : booking.booking_status === 'quote_rejected' ? (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Quote Rejected
-                      </span>
-                    ) : booking.estimated_price ? (
-                      <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-                        ₹{booking.estimated_price}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Waiting for quote
-                      </span>
-                    )}
-                    {booking.emergency_booking === 1 && (
-                      <span className="badge badge-danger" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
-                        Emergency
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="booking-actions" style={{ width: '100%' }}>
-                  <button
-                    onClick={() => navigate(`/providers/${booking.provider_id}`)}
-                    className="btn-outline"
-                    style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
-                  >
-                    View Info
-                  </button>
-
-                  <button
-                    onClick={() => navigate(`/chat/${booking.id}`)}
-                    className="btn-primary"
-                    style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
-                  >
-                    <FaComments /> Chat
-                  </button>
-
-                  {booking.booking_status === 'quoted' && (
-                    <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 8 }}>
-                      <button
-                        onClick={() => handleUpdateQuoteStatus(booking.id, 'accepted')}
-                        className="btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
-                      >
-                        Accept Quote
-                      </button>
-                      <button
-                        onClick={() => handleUpdateQuoteStatus(booking.id, 'quote_rejected')}
-                        className="btn-danger"
-                        style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
-                      >
-                        Reject Quote
-                      </button>
-                    </div>
-                  )}
-
-                  {canPay(booking) && (
-                    <button
-                      onClick={() => navigate(`/payment/${booking.id}`)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '0.8rem', width: '100%' }}
-                    >
-                      <FaCreditCard /> Pay Securely
-                    </button>
-                  )}
-
-                  {booking.booking_status === 'completed' && (
-                    <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
-                      <button
-                        onClick={() => setReviewBookingId(booking.id)}
-                        className="btn-outline"
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--warning)', color: 'var(--warning)' }}
-                      >
-                        <FaStar /> Review
-                      </button>
-
-                      <button
-                        onClick={() => setComplaintBookingId(booking.id)}
-                        className="btn-outline"
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--error)', color: 'var(--error)' }}
-                      >
-                        <FaExclamationCircle /> Dispute
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </article>
+              booking={booking}
+              index={index}
+              navigate={navigate}
+              onUpdateQuoteStatus={handleUpdateQuoteStatus}
+              onReviewOpen={setReviewBookingId}
+              onComplaintOpen={setComplaintBookingId}
+              canPay={canPay}
+              getStatusBadgeClass={getStatusBadgeClass}
+              getNextStatusText={getNextStatusText}
+            />
           ))}
         </div>
       )}
@@ -489,6 +362,176 @@ const MyBookings = () => {
       )}
 
     </div>
+  );
+};
+
+const BookingCard = ({
+  booking,
+  index,
+  navigate,
+  onUpdateQuoteStatus,
+  onReviewOpen,
+  onComplaintOpen,
+  canPay,
+  getStatusBadgeClass,
+  getNextStatusText
+}) => {
+  const { status } = useBookingStatus(booking.id);
+  const currentStatus = status || booking.booking_status;
+
+  const b = { ...booking, booking_status: currentStatus };
+
+  return (
+    <article
+      className="booking-card card-lift animate-fade-up"
+      style={{ 
+        animationDelay: `${index * 60}ms`,
+        borderLeft: `4px solid ${
+          b.booking_status === 'completed' ? 'var(--success)' : 
+          b.booking_status === 'cancelled' || b.booking_status === 'rejected' ? 'var(--error)' :
+          'var(--primary)'
+        }`
+      }}
+    >
+      
+      {/* Column 1: Provider Details & Status Badges */}
+      <div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <span className={`badge ${getStatusBadgeClass(b.booking_status)}`}>
+            {getNextStatusText(b.booking_status)}
+          </span>
+          <span className={`badge ${b.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>
+            Payment: {(b.payment_status || 'pending').toUpperCase()}
+          </span>
+        </div>
+        
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+          Booking #{b.id}
+        </h3>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+          Specialist: <strong>{b.provider_name}</strong> &bull; {b.category_name}
+        </p>
+      </div>
+
+      {/* Column 2: Problem detail & address schedule */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div>
+          <span className="booking-info-label">Problem details</span>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-main)', margin: '2px 0 0 0', lineHeight: 1.4 }}>
+            {b.service_description}
+          </p>
+        </div>
+        <div>
+          <span className="booking-info-label">Schedule & Address</span>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            <FaCalendarAlt style={{ marginRight: 4, color: 'var(--primary)' }} />
+            {b.preferred_date ? new Date(b.preferred_date).toLocaleString() : 'Not specified'}
+          </p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: '2px 0 0 0' }}>
+            {b.service_address}
+          </p>
+        </div>
+      </div>
+
+      {/* Column 3: Amount details and Action button loops */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
+        <div>
+          <span className="booking-info-label">Estimated Bill</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 2 }}>
+            {b.booking_status === 'pending' ? (
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Waiting for provider response
+              </span>
+            ) : b.booking_status === 'quote_rejected' ? (
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Quote Rejected
+              </span>
+            ) : b.estimated_price ? (
+              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+                ₹{b.estimated_price}
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                Waiting for quote
+              </span>
+            )}
+            {b.emergency_booking === 1 && (
+              <span className="badge badge-danger" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
+                Emergency
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="booking-actions" style={{ width: '100%' }}>
+          <button
+            onClick={() => navigate(`/providers/${b.provider_id}`)}
+            className="btn-outline"
+            style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+          >
+            View Info
+          </button>
+
+          <button
+            onClick={() => navigate(`/chat/${b.id}`)}
+            className="btn-primary"
+            style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+          >
+            <FaComments /> Chat
+          </button>
+
+          {b.booking_status === 'quoted' && (
+            <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 8 }}>
+              <button
+                onClick={() => onUpdateQuoteStatus(b.id, 'accepted')}
+                className="btn-secondary"
+                style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+              >
+                Accept Quote
+              </button>
+              <button
+                onClick={() => onUpdateQuoteStatus(b.id, 'quote_rejected')}
+                className="btn-danger"
+                style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
+              >
+                Reject Quote
+              </button>
+            </div>
+          )}
+
+          {canPay(b) && (
+            <button
+              onClick={() => navigate(`/payment/${b.id}`)}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', width: '100%' }}
+            >
+              <FaCreditCard /> Pay Securely
+            </button>
+          )}
+
+          {b.booking_status === 'completed' && (
+            <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 4 }}>
+              <button
+                onClick={() => onReviewOpen(b.id)}
+                className="btn-outline"
+                style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--warning)', color: 'var(--warning)' }}
+              >
+                <FaStar /> Review
+              </button>
+
+              <button
+                onClick={() => onComplaintOpen(b.id)}
+                className="btn-outline"
+                style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, borderColor: 'var(--error)', color: 'var(--error)' }}
+              >
+                <FaExclamationCircle /> Dispute
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+    </article>
   );
 };
 

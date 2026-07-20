@@ -301,6 +301,29 @@ exports.updateBookingStatus = async (req, res) => {
       type: "booking_status"
     });
 
+    // Broadcast booking status change over Socket.IO
+    try {
+      const [updatedRows] = await db.query(
+        `SELECT id, booking_status, provider_id, user_id, updated_at, created_at
+         FROM bookings
+         WHERE id = ?`,
+        [bookingId]
+      );
+      if (updatedRows.length > 0) {
+        const updatedBooking = updatedRows[0];
+        const socketServer = require("../socket/socketServer");
+        socketServer.broadcastBookingStatus({
+          bookingId: Number(updatedBooking.id),
+          status: updatedBooking.booking_status,
+          providerId: Number(updatedBooking.provider_id),
+          userId: Number(updatedBooking.user_id),
+          updatedAt: updatedBooking.updated_at || updatedBooking.created_at || new Date().toISOString()
+        });
+      }
+    } catch (socketErr) {
+      console.error("Failed to broadcast booking status change via socket:", socketErr);
+    }
+
     res.json({
       success: true,
       message: `Booking status updated to ${status}`
@@ -389,6 +412,29 @@ exports.updateCustomerBookingStatus = async (req, res) => {
         message,
         type: "booking_status"
       });
+    }
+
+    // Broadcast booking status change over Socket.IO
+    try {
+      const [updatedRows] = await db.query(
+        `SELECT id, booking_status, provider_id, user_id, updated_at, created_at
+         FROM bookings
+         WHERE id = ?`,
+        [bookingId]
+      );
+      if (updatedRows.length > 0) {
+        const updatedBooking = updatedRows[0];
+        const socketServer = require("../socket/socketServer");
+        socketServer.broadcastBookingStatus({
+          bookingId: Number(updatedBooking.id),
+          status: updatedBooking.booking_status,
+          providerId: Number(updatedBooking.provider_id),
+          userId: Number(updatedBooking.user_id),
+          updatedAt: updatedBooking.updated_at || updatedBooking.created_at || new Date().toISOString()
+        });
+      }
+    } catch (socketErr) {
+      console.error("Failed to broadcast booking status change via socket:", socketErr);
     }
 
     res.json({

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaUserCog, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
+import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
 import { useProviderPresence } from "../hooks/useProviderPresence";
 
 const getCategoryIcon = (name) => {
@@ -29,38 +29,7 @@ function UserHome() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const getLocation = () => {
-    if (!navigator.geolocation) {
-      setMessage("Geolocation is not supported by your browser.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage("Acquiring location details...");
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-
-        setLocation(coords);
-        setMessage("");
-        searchNearby(coords);
-      },
-      () => {
-        setLoading(false);
-        setMessage("Unable to access location permission.");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-      }
-    );
-  };
-
-  const searchNearby = async (coords = location) => {
+  const searchNearby = useCallback(async (coords = location) => {
     if (!coords) {
       setMessage("Get your location first");
       return;
@@ -96,7 +65,38 @@ function UserHome() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [location, radius, categoryId]);
+
+  const getLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setMessage("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("Acquiring location details...");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        setLocation(coords);
+        setMessage("");
+        searchNearby(coords);
+      },
+      () => {
+        setLoading(false);
+        setMessage("Unable to access location permission.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      }
+    );
+  }, [searchNearby]);
 
   useEffect(() => {
     const fetchCats = async () => {
@@ -126,13 +126,13 @@ function UserHome() {
     };
     fetchCats();
     getLocation();
-  }, []);
+  }, [getLocation]);
 
   useEffect(() => {
     if (location) {
       searchNearby(location);
     }
-  }, [categoryId, radius]);
+  }, [categoryId, radius, location, searchNearby]);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', boxSizing: 'border-box' }}>

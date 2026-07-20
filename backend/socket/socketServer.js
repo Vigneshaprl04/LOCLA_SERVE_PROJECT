@@ -2,6 +2,7 @@
 
 const socketEvents = require("./socketEvents");
 const providerHandler = require("./handlers/providerHandler");
+const bookingHandler = require("./bookingHandler");
 
 let io = null;
 
@@ -16,6 +17,8 @@ function init(ioInstance) {
   io.on("connection", (socket) => {
     // Mount the provider socket handler
     providerHandler(io, socket);
+    // Mount the booking socket handler
+    bookingHandler(io, socket);
   });
 }
 
@@ -39,7 +42,34 @@ function broadcastProviderStatus(provider) {
   });
 }
 
+/**
+ * Broadcasts booking status changed updates to all clients in the booking room.
+ * @param {object} bookingUpdate
+ * @param {number} bookingUpdate.bookingId
+ * @param {string} bookingUpdate.status
+ * @param {number} bookingUpdate.providerId
+ * @param {number} bookingUpdate.userId
+ * @param {string|Date} bookingUpdate.updatedAt
+ */
+function broadcastBookingStatus(bookingUpdate) {
+  if (!io) {
+    console.error("Socket Server not initialized!");
+    return;
+  }
+
+  const { bookingId, status, providerId, userId, updatedAt } = bookingUpdate;
+  io.to(`booking:${bookingId}`).emit("booking_status_changed", {
+    bookingId,
+    status,
+    providerId,
+    userId,
+    updatedAt
+  });
+}
+
 module.exports = {
   init,
-  broadcastProviderStatus
+  broadcastProviderStatus,
+  broadcastBookingStatus
 };
+

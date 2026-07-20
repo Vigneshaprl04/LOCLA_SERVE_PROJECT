@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { FaCheckCircle, FaTimesCircle, FaMapMarkerAlt, FaCalendarAlt, FaComments, FaCheck, FaExclamationTriangle, FaSync, FaPowerOff, FaLocationArrow } from 'react-icons/fa';
+import { FaTimesCircle, FaCalendarAlt, FaComments, FaSync, FaPowerOff, FaLocationArrow } from 'react-icons/fa';
+import { BookingContext } from '../context/BookingContext';
+import { useBookingStatus } from '../hooks/useBookingStatus';
 
 const ProviderDashboard = () => {
   const { user, socket } = useAuth();
   const navigate = useNavigate();
+  const { updateBookingLocalStatus } = useContext(BookingContext);
 
   const [bookings, setBookings] = useState([]);
   const [providerId, setProviderId] = useState(null);
@@ -43,7 +46,16 @@ const ProviderDashboard = () => {
         setError('');
         
         const bookingsRes = await api.get('/bookings/provider');
-        setBookings(bookingsRes.data.bookings || []);
+        const bookingsList = bookingsRes.data.bookings || [];
+        setBookings(bookingsList);
+
+        // Pre-populate BookingContext
+        bookingsList.forEach((booking) => {
+          updateBookingLocalStatus(booking.id, {
+            status: booking.booking_status,
+            updatedAt: booking.updated_at || booking.created_at
+          });
+        });
 
         const profileRes = await api.get('/providers/profile');
         if (profileRes.data && profileRes.data.provider) {
@@ -71,6 +83,8 @@ const ProviderDashboard = () => {
       }
     };
     initDashboard();
+  }, [updateBookingLocalStatus]);
+
   // Emit provider_join when socket connects or reconnects
   useEffect(() => {
     if (!socket || !providerId) return;
@@ -209,6 +223,7 @@ const ProviderDashboard = () => {
         status,
       });
 
+      updateBookingLocalStatus(bookingId, { status });
       setMessage(`Booking #${bookingId} successfully updated to ${status.replace(/_/g, ' ')}.`);
       
       const bookingsRes = await api.get('/bookings/provider');
@@ -236,6 +251,7 @@ const ProviderDashboard = () => {
         estimated_price: priceNum
       });
 
+      updateBookingLocalStatus(bookingId, { status: 'quoted' });
       setMessage(`Quote of ₹${priceNum} sent for Booking #${bookingId}.`);
       
       const bookingsRes = await api.get('/bookings/provider');
@@ -540,81 +556,103 @@ const ProviderDashboard = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {bookings.map((booking, index) => (
-              <article
+              <ProviderBookingCard
                 key={booking.id}
-                className="card animate-fade-up"
-                style={{ 
-                  animationDelay: `${index * 50}ms`, 
-                  borderLeft: `4px solid ${
-                    booking.booking_status === 'completed' ? 'var(--success)' :
-                    booking.booking_status === 'pending' ? 'var(--warning)' : 'var(--primary)'
-                  }` 
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-                  <div>
-                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-                      Booking #{booking.id}
-                    </h3>
-                    <p style={{ fontSize: 13, margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-                      Customer: <strong>{booking.customer_name}</strong> &bull; {booking.customer_phone || 'No phone number'}
-                    </p>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <span className="badge badge-accent">
-                      {booking.category_name}
-                    </span>
-                    <span className={`badge ${
-                      booking.booking_status === 'pending' || booking.booking_status === 'quoted' ? 'badge-warning' :
-                      booking.booking_status === 'rejected' || booking.booking_status === 'cancelled' || booking.booking_status === 'quote_rejected' ? 'badge-danger' :
-                      'badge-success'
-                    }`}>
-                      {booking.booking_status.replace(/_/g, ' ').toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, borderTop: '1px solid var(--border-color)', paddingTop: 14 }}>
-                  <div>
-                    <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Description:</strong></p>
-                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{booking.service_description}</p>
-                  </div>
-
-                  <div>
-                    <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Location Address:</strong></p>
-                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{booking.service_address}</p>
-                  </div>
-
-                  <div>
-                    <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Schedule & Estimated Price:</strong></p>
-                    <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
-                      <FaCalendarAlt style={{ marginRight: 4 }} />
-                      {booking.preferred_date ? new Date(booking.preferred_date).toLocaleString() : 'Not specified'}
-                    </p>
-                    <p style={{ fontSize: 15, fontWeight: 800, margin: '4px 0 0 0', color: 'var(--primary)' }}>
-                      {booking.estimated_price ? `₹${booking.estimated_price}` : 'Quote Pending'}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12, marginTop: 16, borderTop: '1px dashed var(--border-color)', paddingTop: 14, flexWrap: 'wrap' }}>
-                  {getStatusActions(booking)}
-                  
-                  <button
-                    onClick={() => navigate(`/chat/${booking.id}`)}
-                    className="btn-outline"
-                    style={{ padding: '8px 16px', fontSize: 13 }}
-                  >
-                    <FaComments /> Chat Customer
-                  </button>
-                </div>
-              </article>
+                booking={booking}
+                index={index}
+                navigate={navigate}
+                getStatusActions={getStatusActions}
+              />
             ))}
           </div>
         )}
       </section>
     </div>
+  );
+};
+
+const ProviderBookingCard = ({
+  booking,
+  index,
+  navigate,
+  getStatusActions
+}) => {
+  const { status } = useBookingStatus(booking.id);
+  const currentStatus = status || booking.booking_status;
+
+  const b = { ...booking, booking_status: currentStatus };
+
+  return (
+    <article
+      key={b.id}
+      className="card animate-fade-up"
+      style={{ 
+        animationDelay: `${index * 50}ms`, 
+        borderLeft: `4px solid ${
+          b.booking_status === 'completed' ? 'var(--success)' :
+          b.booking_status === 'pending' ? 'var(--warning)' : 'var(--primary)'
+        }` 
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+        <div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+            Booking #{b.id}
+          </h3>
+          <p style={{ fontSize: 13, margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
+            Customer: <strong>{b.customer_name}</strong> &bull; {b.customer_phone || 'No phone number'}
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span className="badge badge-accent">
+            {b.category_name}
+          </span>
+          <span className={`badge ${
+            b.booking_status === 'pending' || b.booking_status === 'quoted' ? 'badge-warning' :
+            b.booking_status === 'rejected' || b.booking_status === 'cancelled' || b.booking_status === 'quote_rejected' ? 'badge-danger' :
+            'badge-success'
+          }`}>
+            {b.booking_status.replace(/_/g, ' ').toUpperCase()}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, borderTop: '1px solid var(--border-color)', paddingTop: 14 }}>
+        <div>
+          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Description:</strong></p>
+          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{b.service_description}</p>
+        </div>
+
+        <div>
+          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Location Address:</strong></p>
+          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{b.service_address}</p>
+        </div>
+
+        <div>
+          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Schedule & Estimated Price:</strong></p>
+          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
+            <FaCalendarAlt style={{ marginRight: 4 }} />
+            {b.preferred_date ? new Date(b.preferred_date).toLocaleString() : 'Not specified'}
+          </p>
+          <p style={{ fontSize: 15, fontWeight: 800, margin: '4px 0 0 0', color: 'var(--primary)' }}>
+            {b.estimated_price ? `₹${b.estimated_price}` : 'Quote Pending'}
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, marginTop: 16, borderTop: '1px dashed var(--border-color)', paddingTop: 14, flexWrap: 'wrap' }}>
+        {getStatusActions(b)}
+        
+        <button
+          onClick={() => navigate(`/chat/${b.id}`)}
+          className="btn-outline"
+          style={{ padding: '8px 16px', fontSize: 13 }}
+        >
+          <FaComments /> Chat Customer
+        </button>
+      </div>
+    </article>
   );
 };
 
