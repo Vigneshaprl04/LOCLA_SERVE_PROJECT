@@ -19,10 +19,17 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 
+import { useEffect } from 'react';
 import './App.css';
 
 function App() {
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
+
   return (
+
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />

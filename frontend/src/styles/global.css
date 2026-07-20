@@ -289,3 +289,35 @@ a:hover {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* Light Theme Overrides & Elements */
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.22);
+}
+
+:root[data-theme='light'] .navbar-link:hover,
+:root[data-theme='light'] .navbar-link.active {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+:root[data-theme='light'] .notification-bell-btn:hover {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+:root[data-theme='light'] .form-control {
+  background-color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme='light'] .skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%);
+}
+
+:root[data-theme='light'] .skeleton-card {
+  border-color: rgba(15, 23, 42, 0.08);
+}
+

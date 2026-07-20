@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import NotificationBell from './NotificationBell';
-import { FaSignOutAlt, FaCompass, FaBars, FaTimes, FaUserAlt } from 'react-icons/fa';
+import { FaSignOutAlt, FaCompass, FaBars, FaTimes, FaUserAlt, FaSun, FaMoon } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -14,6 +14,17 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+  };
 
   const handleLogout = () => {
     logout();
@@ -22,6 +33,7 @@ const Navbar = () => {
   };
 
   if (!user) return null;
+
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -121,7 +133,29 @@ const Navbar = () => {
           </ul>
 
           {/* Desktop Actions Panel */}
-          <div className="navbar-actions" style={{ display: 'flex' }}>
+          <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={toggleTheme}
+              className="btn-outline"
+              style={{
+                width: '38px',
+                height: '38px',
+                padding: 0,
+                borderRadius: 'var(--radius-full)',
+                borderColor: 'var(--glass-border)',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all var(--transition-fast)'
+              }}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? <FaSun size={14} /> : <FaMoon size={14} />}
+            </button>
+
             <NotificationBell />
 
             <div 
@@ -131,6 +165,7 @@ const Navbar = () => {
             >
               {getInitials(user.name)}
             </div>
+
 
             <button
               onClick={handleLogout}
@@ -170,16 +205,17 @@ const Navbar = () => {
               top: "80px",
               left: 0,
               right: 0,
-              background: "rgba(10, 15, 30, 0.95)",
+              background: "var(--bg-mobile-menu)",
               backdropFilter: "var(--glass-blur)",
               WebkitBackdropFilter: "var(--glass-blur)",
               borderBottom: "1px solid var(--glass-border)",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6)",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
               padding: "24px 16px",
               zIndex: 49,
               overflow: "hidden",
               boxSizing: "border-box"
             }}
+
           >
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
               {user.role === 'user' && (
@@ -231,9 +267,20 @@ const Navbar = () => {
 
               <li style={{ borderTop: "1px solid var(--glass-border)", marginTop: "8px", paddingTop: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>Theme Switch:</span>
+                  <button 
+                    onClick={toggleTheme}
+                    className="btn-outline" 
+                    style={{ padding: "6px 12px", fontSize: "0.85rem", color: "var(--text-main)", background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--glass-border)" }}
+                  >
+                    {theme === 'dark' ? <><FaSun size={12} style={{ marginRight: 6 }} /> Light Mode</> : <><FaMoon size={12} style={{ marginRight: 6 }} /> Dark Mode</>}
+                  </button>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <span style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>Notifications:</span>
                   <NotificationBell />
                 </div>
+
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   <button 
                     onClick={handleProfileClick} 

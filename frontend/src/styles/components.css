@@ -389,3 +389,10 @@
     display: none;
   }
 }
+
+/* Light Mode Navigation Overrides */
+:root[data-theme='light'] .notification-dropdown {
+  background-color: rgba(248, 250, 252, 0.9);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
