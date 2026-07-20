@@ -395,7 +395,7 @@ const AdminDashboard = () => {
       <aside 
         style={{
           width: sidebarCollapsed ? '80px' : '260px',
-          background: 'rgba(10, 15, 30, 0.45)',
+          background: 'var(--bg-card)',
           backdropFilter: 'var(--glass-blur)',
           WebkitBackdropFilter: 'var(--glass-blur)',
           borderRight: '1px solid var(--glass-border)',
@@ -463,8 +463,8 @@ const AdminDashboard = () => {
                     padding: '12px 14px',
                     borderRadius: 'var(--radius-md)',
                     border: 'none',
-                    background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                    color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                    background: isActive ? 'var(--bg-sidebar-active)' : 'transparent',
+                    color: isActive ? 'var(--color-sidebar-text-active)' : 'var(--text-muted)',
                     cursor: 'pointer',
                     fontSize: '0.92rem',
                     fontWeight: isActive ? 700 : 500,
@@ -490,7 +490,7 @@ const AdminDashboard = () => {
               padding: '10px',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--glass-border)',
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: 'var(--bg-sidebar-active)',
               color: 'var(--text-muted)',
               cursor: 'pointer',
               fontSize: '0.85rem'
@@ -518,6 +518,7 @@ const AdminDashboard = () => {
               fontSize: '0.9rem'
             }}
             title="Logout"
+
           >
             <FaSignOutAlt size={16} style={{ flexShrink: 0 }} />
             {!sidebarCollapsed && <span>Logout</span>}
@@ -560,7 +561,7 @@ const AdminDashboard = () => {
               bottom: 0,
               left: 0,
               width: '260px',
-              background: 'rgba(10, 15, 30, 0.96)',
+              background: 'var(--bg-mobile-menu)',
               backdropFilter: 'blur(30px)',
               WebkitBackdropFilter: 'blur(30px)',
               borderRight: '1px solid var(--glass-border)',
@@ -574,8 +575,8 @@ const AdminDashboard = () => {
           >
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'var(--gradient-text)', display: 'flex', alignItems: 'center', justifyContext: 'center' }}><FaLock size={18} style={{ color: '#ffffff' }} /></div>
-                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff' }}>LocalServe HQ</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'var(--gradient-text)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaLock size={18} style={{ color: '#ffffff' }} /></div>
+                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)' }}>LocalServe HQ</span>
               </div>
               <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
@@ -607,8 +608,8 @@ const AdminDashboard = () => {
                         padding: '12px 14px',
                         borderRadius: 'var(--radius-md)',
                         border: 'none',
-                        background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                        color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                        background: isActive ? 'var(--bg-sidebar-active)' : 'transparent',
+                        color: isActive ? 'var(--color-sidebar-text-active)' : 'var(--text-muted)',
                         cursor: 'pointer',
                         fontSize: '0.92rem',
                         fontWeight: isActive ? 700 : 500,
@@ -622,6 +623,7 @@ const AdminDashboard = () => {
                 })}
               </nav>
             </div>
+
             <button
               onClick={() => {
                 logout();

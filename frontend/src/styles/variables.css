@@ -67,6 +67,8 @@
 
   --bg-mobile-menu: rgba(10, 15, 30, 0.95);
   --bg-footer: #0a0f1d;
+  --bg-sidebar-active: rgba(255, 255, 255, 0.08);
+  --color-sidebar-text-active: #ffffff;
 
   /* Timings */
   --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -81,6 +83,9 @@
   --bg-nav: rgba(248, 250, 252, 0.8);
   --bg-mobile-menu: rgba(248, 250, 252, 0.95);
   --bg-footer: #f1f5f9;
+  --bg-sidebar-active: rgba(15, 23, 42, 0.05);
+  --color-sidebar-text-active: #6d28d9;
+
 
 
   
