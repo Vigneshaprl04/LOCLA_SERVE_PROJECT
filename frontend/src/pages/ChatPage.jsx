@@ -23,8 +23,23 @@ const ChatPage = () => {
   const [detailsError, setDetailsError] = useState('');
   const [inputText, setInputText] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const res = await api.post('/ai/reply-suggestions', { bookingId });
+        if (res.data.success) {
+          setSuggestions(res.data.suggestions || []);
+        }
+      } catch (err) {
+        console.log("Suggestions fetch skipped:", err.message);
+      }
+    };
+    fetchSuggestions();
+  }, [bookingId, messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -219,6 +234,40 @@ const ChatPage = () => {
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Clickable AI reply suggestion pills */}
+        {suggestions.length > 0 && socketConnected && (
+          <div style={{ display: 'flex', gap: '8px', padding: '10px 24px', flexWrap: 'wrap', borderTop: '1px solid var(--glass-border)', background: 'rgba(5, 5, 10, 0.2)' }}>
+            {suggestions.map((s, idx) => (
+              <button
+                type="button"
+                key={idx}
+                onClick={() => setInputText(s)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  border: '1px solid var(--glass-border)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'all var(--transition-fast)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--primary)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Message Input Composer */}
         <form onSubmit={handleSend} className="chat-composer">

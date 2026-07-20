@@ -24,7 +24,8 @@ import {
   FaShieldAlt,
   FaSignOutAlt,
   FaMoon,
-  FaSun
+  FaSun,
+  FaRobot
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -70,6 +71,11 @@ const AdminDashboard = () => {
   });
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
+
+  // AI insights states
+  const [aiInsights, setAiInsights] = useState('');
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
 
   // Recent Operations (Current Session) State
   const [recentOperations, setRecentOperations] = useState([]);
@@ -195,13 +201,32 @@ const AdminDashboard = () => {
     }
   }, [createAbortSignal]);
 
+  // Fetch AI Insights Overview
+  const fetchAiInsights = useCallback(async () => {
+    try {
+      setInsightsLoading(true);
+      setInsightsError('');
+      const signal = createAbortSignal();
+      const response = await api.get('/ai/admin-insights', { signal });
+      if (response.data.success) {
+        setAiInsights(response.data.insights || '');
+      }
+    } catch (err) {
+      if (err.name === 'CanceledError') return;
+      setInsightsError(err.response?.data?.message || 'Unable to compile platform insights');
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, [createAbortSignal]);
+
   // Aggregate Initial Data Load
   const fetchAllData = useCallback(() => {
     fetchPendingProviders();
     fetchFinancialStats();
     fetchPayments();
     fetchComplaints();
-  }, [fetchPendingProviders, fetchFinancialStats, fetchPayments, fetchComplaints]);
+    fetchAiInsights();
+  }, [fetchPendingProviders, fetchFinancialStats, fetchPayments, fetchComplaints, fetchAiInsights]);
 
   useEffect(() => {
     fetchAllData();
@@ -675,6 +700,23 @@ const AdminDashboard = () => {
           {activeTab === 'dashboard' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
               
+              {/* AI Platform Insights Section */}
+              <GlassCard hoverLift={false} style={{ padding: '24px', marginBottom: '24px', border: '1px solid rgba(6, 182, 212, 0.25)', boxShadow: '0 0 20px rgba(6, 182, 212, 0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <FaRobot style={{ color: 'var(--accent)', fontSize: '1.2rem' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>AI Platform Auditor & Anomalies Summary</h3>
+                </div>
+                {insightsLoading ? (
+                  <Loader size={20} text="Compiling engine statistics..." />
+                ) : insightsError ? (
+                  <span style={{ fontSize: '0.85rem', color: '#fca5a5' }}>{insightsError}</span>
+                ) : (
+                  <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                    {aiInsights || "Initializing platform summaries..."}
+                  </p>
+                )}
+              </GlassCard>
+
               {/* Financial KPI stats grid */}
               <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-main)' }}>Financial Performance</h2>
               

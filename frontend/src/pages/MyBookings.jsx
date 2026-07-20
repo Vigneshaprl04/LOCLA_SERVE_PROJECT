@@ -4,7 +4,7 @@ import api from '../api';
 import GlassCard from '../components/ui/GlassCard';
 import GlassButton from '../components/ui/GlassButton';
 import Loader from '../components/ui/Loader';
-import { FaWrench, FaCalendarAlt, FaComments, FaCreditCard, FaStar, FaExclamationCircle, FaUser } from 'react-icons/fa';
+import { FaWrench, FaCalendarAlt, FaComments, FaCreditCard, FaStar, FaExclamationCircle, FaUser, FaRobot } from 'react-icons/fa';
 import { BookingContext } from '../context/BookingContext';
 import { useBookingStatus } from '../hooks/useBookingStatus';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +35,22 @@ const MyBookings = () => {
   const [complaintText, setComplaintText] = useState('');
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [complaintSuccess, setComplaintSuccess] = useState('');
+  const [drafting, setDrafting] = useState(false);
+
+  const handleAiDraft = async () => {
+    if (!complaintText.trim()) return;
+    try {
+      setDrafting(true);
+      const res = await api.post('/ai/draft-dispute', { description: complaintText });
+      if (res.data.success) {
+        setComplaintText(res.data.draft);
+      }
+    } catch (err) {
+      console.log('Skipped drafting dispute details:', err.message);
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -345,9 +361,29 @@ const MyBookings = () => {
               ) : (
                 <form onSubmit={handleComplaintSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="form-group">
-                    <label htmlFor="complaintText" className="form-label">
-                      Describe your dispute details
-                    </label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label htmlFor="complaintText" className="form-label" style={{ margin: 0 }}>
+                        Describe your dispute details
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAiDraft}
+                        disabled={drafting || !complaintText.trim()}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <FaRobot /> {drafting ? 'Drafting...' : 'Polish with AI'}
+                      </button>
+                    </div>
                     <textarea
                       id="complaintText"
                       value={complaintText}
