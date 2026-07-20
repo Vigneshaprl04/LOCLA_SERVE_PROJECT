@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import NotificationBell from './NotificationBell';
-import { FaSignOutAlt, FaCompass, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSignOutAlt, FaCompass, FaBars, FaTimes, FaUserAlt } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * Premium glassmorphic navigation header.
+ * Uses Framer Motion for responsive mobile toggle menus.
+ */
 const Navbar = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -44,7 +49,7 @@ const Navbar = () => {
           
           {/* Logo Branding */}
           <Link to="/" className="navbar-brand" onClick={() => setMenuOpen(false)}>
-            <FaCompass style={{ fontSize: 20 }} />
+            <FaCompass size={22} />
             <span>LocalServe</span>
           </Link>
 
@@ -53,19 +58,26 @@ const Navbar = () => {
             className="navbar-mobile-toggle" 
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle navigation menu"
+            style={{
+              color: "var(--text-main)",
+              fontSize: "20px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px"
+            }}
           >
-            {menuOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+            {menuOpen ? <FaTimes /> : <FaBars />}
           </button>
 
-          {/* Navigation Links list */}
-          <ul className={`navbar-links ${menuOpen ? 'open' : ''}`}>
+          {/* Desktop Navigation Links */}
+          <ul className="navbar-links">
             {user.role === 'user' && (
               <>
                 <li>
                   <Link
                     to="/user/home"
                     className={`navbar-link ${location.pathname === '/user/home' ? 'active' : ''}`}
-                    onClick={() => setMenuOpen(false)}
                   >
                     Find Services
                   </Link>
@@ -74,7 +86,6 @@ const Navbar = () => {
                   <Link
                     to="/user/bookings"
                     className={`navbar-link ${location.pathname === '/user/bookings' ? 'active' : ''}`}
-                    onClick={() => setMenuOpen(false)}
                   >
                     My Bookings
                   </Link>
@@ -88,7 +99,6 @@ const Navbar = () => {
                   <Link
                     to="/provider/dashboard"
                     className={`navbar-link ${location.pathname === '/provider/dashboard' ? 'active' : ''}`}
-                    onClick={() => setMenuOpen(false)}
                   >
                     Dashboard
                   </Link>
@@ -102,43 +112,41 @@ const Navbar = () => {
                   <Link
                     to="/admin/dashboard"
                     className={`navbar-link ${location.pathname === '/admin/dashboard' ? 'active' : ''}`}
-                    onClick={() => setMenuOpen(false)}
                   >
                     Admin Panels
                   </Link>
                 </li>
               </>
             )}
-            
-            {/* Mobile-only profile & logout links */}
-            {menuOpen && (
-              <li style={{ borderTop: '1px solid var(--border-color)', marginTop: 8, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px', color: 'var(--text-main)' }}>
-                  <span>Notifications:</span>
-                  <NotificationBell />
-                </div>
-                <button onClick={handleProfileClick} className="btn-outline" style={{ width: '100%' }}>
-                  Profile Settings
-                </button>
-                <button onClick={handleLogout} className="btn-danger" style={{ width: '100%' }}>
-                  Logout
-                </button>
-              </li>
-            )}
           </ul>
 
-          {/* Actions panel (hidden on mobile menu open since it folds inside menu) */}
-          <div className="navbar-actions" style={{ display: menuOpen ? 'none' : 'flex' }}>
+          {/* Desktop Actions Panel */}
+          <div className="navbar-actions" style={{ display: 'flex' }}>
             <NotificationBell />
 
-            <div onClick={handleProfileClick} className="navbar-avatar" title="My Profile">
+            <div 
+              onClick={handleProfileClick} 
+              className="navbar-avatar" 
+              title="My Profile"
+            >
               {getInitials(user.name)}
             </div>
 
             <button
               onClick={handleLogout}
               className="btn-outline"
-              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                borderRadius: 'var(--radius-sm)',
+                borderColor: 'var(--glass-border)',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
               title="Logout"
             >
               <FaSignOutAlt size={13} />
@@ -149,29 +157,112 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Javascript styles for responsive toggle menu handling */}
+      {/* Mobile Slide-Down Dropdown Menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            style={{
+              position: "absolute",
+              top: "80px",
+              left: 0,
+              right: 0,
+              background: "rgba(10, 15, 30, 0.95)",
+              backdropFilter: "var(--glass-blur)",
+              WebkitBackdropFilter: "var(--glass-blur)",
+              borderBottom: "1px solid var(--glass-border)",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6)",
+              padding: "24px 16px",
+              zIndex: 49,
+              overflow: "hidden",
+              boxSizing: "border-box"
+            }}
+          >
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "16px" }}>
+              {user.role === 'user' && (
+                <>
+                  <li>
+                    <Link
+                      to="/user/home"
+                      style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Find Services
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/user/bookings"
+                      style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      My Bookings
+                    </Link>
+                  </li>
+                </>
+              )}
+
+              {user.role === 'provider' && (
+                <li>
+                  <Link
+                    to="/provider/dashboard"
+                    style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+              )}
+
+              {user.role === 'admin' && (
+                <li>
+                  <Link
+                    to="/admin/dashboard"
+                    style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Admin Panels
+                  </Link>
+                </li>
+              )}
+
+              <li style={{ borderTop: "1px solid var(--glass-border)", marginTop: "8px", paddingTop: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>Notifications:</span>
+                  <NotificationBell />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <button 
+                    onClick={handleProfileClick} 
+                    className="btn-outline" 
+                    style={{ width: "100%", padding: "12px", justifyContent: "center", color: "var(--text-main)", background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--glass-border)" }}
+                  >
+                    <FaUserAlt size={13} style={{ marginRight: 8 }} /> Profile Settings
+                  </button>
+                  <button 
+                    onClick={handleLogout} 
+                    className="btn-danger" 
+                    style={{ width: "100%", padding: "12px", justifyContent: "center", color: "#fca5a5", background: "rgba(239, 68, 68, 0.15)", borderColor: "rgba(239, 68, 68, 0.2)" }}
+                  >
+                    <FaSignOutAlt size={13} style={{ marginRight: 8 }} /> Logout
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
         @media (max-width: 767px) {
+          .navbar-actions {
+            display: none !important;
+          }
           .navbar-links {
-            display: none;
-            position: absolute;
-            top: 72px;
-            left: 0;
-            right: 0;
-            background-color: #ffffff;
-            border-bottom: 1px solid var(--border-color);
-            padding: var(--space-6) var(--space-4);
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: var(--shadow-lg);
-            z-index: 40;
-            list-style: none;
-          }
-          .navbar-links.open {
-            display: flex;
-          }
-          .navbar-logout-text {
-            display: none;
+            display: none !important;
           }
         }
       `}</style>
