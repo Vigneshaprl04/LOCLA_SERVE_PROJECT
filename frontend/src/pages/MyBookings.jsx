@@ -8,6 +8,8 @@ import { FaWrench, FaCalendarAlt, FaComments, FaCreditCard, FaStar, FaExclamatio
 import { BookingContext } from '../context/BookingContext';
 import { useBookingStatus } from '../hooks/useBookingStatus';
 import { motion, AnimatePresence } from 'framer-motion';
+import MapTracking from '../components/MapTracking';
+
 
 /**
  * Redesigned Premium User Bookings Management screen.
@@ -400,8 +402,10 @@ const BookingCard = ({
 }) => {
   const { status } = useBookingStatus(booking.id);
   const currentStatus = status || booking.booking_status;
+  const [showTracking, setShowTracking] = useState(false);
 
   const b = { ...booking, booking_status: currentStatus };
+
 
   return (
     <motion.div
@@ -548,6 +552,27 @@ const BookingCard = ({
                 </GlassButton>
               )}
 
+              {['accepted', 'on_the_way'].includes(b.booking_status) && (
+                <GlassButton
+                  onClick={() => setShowTracking(!showTracking)}
+                  variant="primary"
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px 12px', 
+                    fontSize: '0.8rem',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <FaLocationArrow /> {showTracking ? 'Hide Tracking Map' : 'Track Service Partner'}
+                </GlassButton>
+              )}
+
               {b.booking_status === 'completed' && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <GlassButton
@@ -571,6 +596,12 @@ const BookingCard = ({
           </div>
 
         </div>
+
+        {showTracking && (
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
+            <MapTracking bookingId={b.id} bookingStatus={b.booking_status} />
+          </div>
+        )}
       </GlassCard>
     </motion.div>
   );
