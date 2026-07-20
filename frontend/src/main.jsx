@@ -9,6 +9,7 @@ import { BookingProvider } from './context/BookingContext.jsx';
 import { ChatProvider } from './context/ChatContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
 import { registerServiceWorkerAndPush } from './pwaHelper';
+import './i18n';
 
 // Initialize PWA configurations and notifications subscription on startup
 registerServiceWorkerAndPush();

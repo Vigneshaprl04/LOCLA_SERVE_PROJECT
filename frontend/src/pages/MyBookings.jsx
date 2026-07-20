@@ -4,11 +4,12 @@ import api from '../api';
 import GlassCard from '../components/ui/GlassCard';
 import GlassButton from '../components/ui/GlassButton';
 import Loader from '../components/ui/Loader';
-import { FaWrench, FaCalendarAlt, FaComments, FaCreditCard, FaStar, FaExclamationCircle, FaUser, FaRobot } from 'react-icons/fa';
+import { FaWrench, FaCalendarAlt, FaComments, FaCreditCard, FaStar, FaExclamationCircle, FaUser, FaRobot, FaLocationArrow } from 'react-icons/fa';
 import { BookingContext } from '../context/BookingContext';
 import { useBookingStatus } from '../hooks/useBookingStatus';
 import { motion, AnimatePresence } from 'framer-motion';
 import MapTracking from '../components/MapTracking';
+import { useTranslation } from 'react-i18next';
 
 
 /**
@@ -18,6 +19,35 @@ import MapTracking from '../components/MapTracking';
 const MyBookings = () => {
   const navigate = useNavigate();
   const { updateBookingLocalStatus } = useContext(BookingContext);
+  const { t, i18n } = useTranslation();
+
+  const formatBookingDate = (dateStr) => {
+    try {
+      const date = new Date(dateStr);
+      const locale = i18n.language === 'ta' ? 'ta-IN' : 'en-US';
+      return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const formatBookingAmount = (amount) => {
+    const locale = i18n.language === 'ta' ? 'ta-IN' : 'en-US';
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: 'INR' }).format(amount);
+  };
+
+  const getTranslatedStatusName = (status) => {
+    switch (status) {
+      case 'pending': return t('statusPending');
+      case 'accepted': return t('statusAccepted');
+      case 'on_the_way': return t('statusOnTheWay');
+      case 'arrived': return t('statusArrived');
+      case 'started': return t('statusStarted');
+      case 'completed': return t('statusCompleted');
+      case 'cancelled': return t('statusCancelled');
+      default: return status;
+    }
+  };
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -197,9 +227,9 @@ const MyBookings = () => {
       {/* Page Header */}
       <header style={{ marginBottom: 32, textAlign: 'left' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          My Bookings
+          {t('bookingsTitle')}
         </h1>
-        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Track, manage, pay, and review your local service requests</p>
+        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>{t('bookingsSubtitle')}</p>
       </header>
 
       {error && (
@@ -475,7 +505,7 @@ const BookingCard = ({
           <div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               <span className={`badge ${getStatusBadgeClass(b.booking_status)}`}>
-                {getNextStatusText(b.booking_status)}
+                {getTranslatedStatusName(b.booking_status)}
               </span>
               <span className={`badge ${b.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>
                 {(b.payment_status || 'pending').toUpperCase()}
@@ -502,7 +532,7 @@ const BookingCard = ({
               <span style={{ fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', fontWeight: 700 }}>Schedule</span>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FaCalendarAlt style={{ color: 'var(--accent)' }} />
-                {b.preferred_date ? new Date(b.preferred_date).toLocaleDateString() : 'Not specified'}
+                {b.preferred_date ? formatBookingDate(b.preferred_date) : 'Not specified'}
               </p>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
                 {b.service_address}
@@ -525,7 +555,7 @@ const BookingCard = ({
                   </span>
                 ) : b.estimated_price ? (
                   <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em' }}>
-                    ₹{b.estimated_price}
+                    {formatBookingAmount(b.estimated_price)}
                   </span>
                 ) : (
                   <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
@@ -555,7 +585,7 @@ const BookingCard = ({
                   variant="secondary"
                   style={{ padding: '6px 12px', fontSize: '0.8rem', flex: 1 }}
                 >
-                  <FaComments /> Chat
+                  <FaComments /> {t('chatPartnerBtn')}
                 </GlassButton>
               </div>
 
@@ -605,7 +635,7 @@ const BookingCard = ({
                     gap: '8px'
                   }}
                 >
-                  <FaLocationArrow /> {showTracking ? 'Hide Tracking Map' : 'Track Service Partner'}
+                  <FaLocationArrow /> {showTracking ? 'Hide Tracking Map' : t('trackPartnerBtn')}
                 </GlassButton>
               )}
 
@@ -624,7 +654,7 @@ const BookingCard = ({
                     variant="outline"
                     style={{ padding: '6px 12px', fontSize: '0.75rem', flex: 1, color: 'var(--error)', borderColor: 'rgba(239,68,68,0.2)' }}
                   >
-                    <FaExclamationCircle /> Dispute
+                    <FaExclamationCircle /> {t('disputeBtn')}
                   </GlassButton>
                 </div>
               )}

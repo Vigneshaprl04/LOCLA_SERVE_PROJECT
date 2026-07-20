@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import NotificationBell from './NotificationBell';
 import { FaSignOutAlt, FaCompass, FaBars, FaTimes, FaUserAlt, FaSun, FaMoon } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Premium glassmorphic navigation header.
@@ -15,6 +16,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -24,6 +26,12 @@ const Navbar = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
+  };
+
+  const toggleLanguage = () => {
+    const nextLang = i18n.language === 'en' ? 'ta' : 'en';
+    i18n.changeLanguage(nextLang);
+    localStorage.setItem('language', nextLang);
   };
 
   const handleLogout = () => {
@@ -91,7 +99,7 @@ const Navbar = () => {
                     to="/user/home"
                     className={`navbar-link ${location.pathname === '/user/home' ? 'active' : ''}`}
                   >
-                    Find Services
+                    {t('home')}
                   </Link>
                 </li>
                 <li>
@@ -99,7 +107,7 @@ const Navbar = () => {
                     to="/user/bookings"
                     className={`navbar-link ${location.pathname === '/user/bookings' ? 'active' : ''}`}
                   >
-                    My Bookings
+                    {t('myBookings')}
                   </Link>
                 </li>
               </>
@@ -112,7 +120,7 @@ const Navbar = () => {
                     to="/provider/dashboard"
                     className={`navbar-link ${location.pathname === '/provider/dashboard' ? 'active' : ''}`}
                   >
-                    Dashboard
+                    {t('providerDashboard')}
                   </Link>
                 </li>
               </>
@@ -125,7 +133,7 @@ const Navbar = () => {
                     to="/admin/dashboard"
                     className={`navbar-link ${location.pathname === '/admin/dashboard' ? 'active' : ''}`}
                   >
-                    Admin Panels
+                    {t('adminPortal')}
                   </Link>
                 </li>
               </>
@@ -134,6 +142,31 @@ const Navbar = () => {
 
           {/* Desktop Actions Panel */}
           <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={toggleLanguage}
+              className="btn-outline"
+              style={{
+                padding: '0 8px',
+                height: '38px',
+                borderRadius: 'var(--radius-full)',
+                borderColor: 'var(--glass-border)',
+                background: 'rgba(255, 255, 255, 0.03)',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                minWidth: '38px',
+                transition: 'all var(--transition-fast)'
+              }}
+              title="Change Language / மொழியை மாற்றுக"
+              aria-label="Toggle language locale"
+            >
+              {i18n.language === 'en' ? 'EN' : 'தமிழ்'}
+            </button>
+
             <button
               onClick={toggleTheme}
               className="btn-outline"
@@ -185,7 +218,7 @@ const Navbar = () => {
               title="Logout"
             >
               <FaSignOutAlt size={13} />
-              <span className="navbar-logout-text">Logout</span>
+              <span className="navbar-logout-text">{t('logout')}</span>
             </button>
           </div>
 
@@ -226,7 +259,7 @@ const Navbar = () => {
                       style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
                       onClick={() => setMenuOpen(false)}
                     >
-                      Find Services
+                      {t('home')}
                     </Link>
                   </li>
                   <li>
@@ -235,7 +268,7 @@ const Navbar = () => {
                       style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
                       onClick={() => setMenuOpen(false)}
                     >
-                      My Bookings
+                      {t('myBookings')}
                     </Link>
                   </li>
                 </>
@@ -248,7 +281,7 @@ const Navbar = () => {
                     style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    Dashboard
+                    {t('providerDashboard')}
                   </Link>
                 </li>
               )}
@@ -260,12 +293,22 @@ const Navbar = () => {
                     style={{ color: "var(--text-main)", fontSize: "1.1rem", fontWeight: "600", display: "block" }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    Admin Panels
+                    {t('adminPortal')}
                   </Link>
                 </li>
               )}
 
               <li style={{ borderTop: "1px solid var(--glass-border)", marginTop: "8px", paddingTop: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>Language / மொழி:</span>
+                  <button 
+                    onClick={toggleLanguage}
+                    className="btn-outline" 
+                    style={{ padding: "6px 12px", fontSize: "0.85rem", color: "var(--text-main)", background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--glass-border)" }}
+                  >
+                    {i18n.language === 'en' ? 'Switch to தமிழ்' : 'Switch to English'}
+                  </button>
+                </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <span style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>Theme Switch:</span>
                   <button 
@@ -294,7 +337,7 @@ const Navbar = () => {
                     className="btn-danger" 
                     style={{ width: "100%", padding: "12px", justifyContent: "center", color: "#fca5a5", background: "rgba(239, 68, 68, 0.15)", borderColor: "rgba(239, 68, 68, 0.2)" }}
                   >
-                    <FaSignOutAlt size={13} style={{ marginRight: 8 }} /> Logout
+                    <FaSignOutAlt size={13} style={{ marginRight: 8 }} /> {t('logout')}
                   </button>
                 </div>
               </li>

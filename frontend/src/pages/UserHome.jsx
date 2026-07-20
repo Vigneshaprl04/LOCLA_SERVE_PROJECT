@@ -6,7 +6,8 @@ import GlassButton from "../components/ui/GlassButton";
 import Loader from "../components/ui/Loader";
 import { FaMapMarkerAlt, FaStar, FaTools, FaWrench, FaBolt, FaBroom, FaPaintRoller, FaBriefcase, FaCompass, FaRobot } from "react-icons/fa";
 import { useProviderPresence } from "../hooks/useProviderPresence";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import "../styles/UserHome.css";
 
 const getCategoryIcon = (name) => {
@@ -25,6 +26,22 @@ const getCategoryIcon = (name) => {
 
 function UserHome() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+
+  const getTranslatedCategoryName = (name) => {
+    switch (name) {
+      case "All Services": return t('allServices');
+      case "Electrician": return t('electrician');
+      case "Plumber": return t('plumber');
+      case "Mechanic": return t('mechanic');
+      case "Carpenter": return t('carpenter');
+      case "Painter": return t('painter');
+      case "AC Repair": return t('acRepair');
+      case "Appliance Repair": return t('applianceRepair');
+      case "Cleaning Service": return t('cleaningService');
+      default: return name;
+    }
+  };
 
   const [categories, setCategories] = useState([{ id: "", name: "All Services" }]);
   const [providers, setProviders] = useState([]);
@@ -245,17 +262,17 @@ function UserHome() {
         transition={{ delay: 0.1, duration: 0.4 }}
       >
         <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          Local Services, Instantly Verified.
+          {t('heroTitle')}
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', margin: '0 0 24px 0', maxWidth: 640 }}>
-          Find, chat with, and book certified local service professionals in your neighborhood within minutes.
+          {t('heroSubtitle')}
         </p>
         <GlassButton 
           onClick={() => navigate('/user/assistant')} 
           variant="primary" 
           glow={true}
         >
-          <FaRobot style={{ fontSize: 16 }} /> Try AI Service Assistant
+          <FaRobot style={{ fontSize: 16 }} /> {t('aiButton')}
         </GlassButton>
       </motion.div>
 
@@ -264,17 +281,17 @@ function UserHome() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           
           <div className="form-group" style={{ flex: '1 1 240px' }}>
-            <label className="form-label">Search Radius</label>
+            <label className="form-label">{t('searchRadius')}</label>
             <div className="input-icon-group">
               <select
                 value={radius}
                 onChange={(e) => setRadius(Number(e.target.value))}
                 className="form-control"
               >
-                <option value={5}>Within 5 KM</option>
-                <option value={10}>Within 10 KM</option>
-                <option value={20}>Within 20 KM</option>
-                <option value={50}>Within 50 KM</option>
+                <option value={5}>{t('radius5')}</option>
+                <option value={10}>{t('radius10')}</option>
+                <option value={20}>{t('radius20')}</option>
+                <option value={50}>{t('radius50')}</option>
               </select>
               <span className="input-icon">
                 <FaCompass />
@@ -284,10 +301,10 @@ function UserHome() {
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <GlassButton onClick={() => searchNearby(location)} variant="primary">
-              Search Providers
+              {t('searchBtn')}
             </GlassButton>
             <GlassButton onClick={getLocation} variant="secondary">
-              <FaMapMarkerAlt /> Refresh Location
+              <FaMapMarkerAlt /> {t('refreshLocBtn')}
             </GlassButton>
           </div>
 
@@ -296,7 +313,7 @@ function UserHome() {
         {location && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-light)', marginTop: 16 }}>
             <FaMapMarkerAlt style={{ color: 'var(--accent)' }} />
-            <span>Active Coordinates: <strong>{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</strong></span>
+            <span>{t('activeCoords')}: <strong>{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</strong></span>
           </div>
         )}
       </GlassCard>
@@ -310,10 +327,10 @@ function UserHome() {
       {/* Service Categories Grid */}
       <div style={{ textAlign: 'left', marginBottom: 20 }}>
         <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
-          Browse Service Categories
+          {t('browseCategories')}
         </h2>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-          Select a category to filter local service professionals
+          {t('selectCategoryText')}
         </p>
       </div>
 
@@ -355,7 +372,7 @@ function UserHome() {
               <div className="category-icon-container">
                 {getCategoryIcon(cat.name)}
               </div>
-              <span className="category-label">{cat.name}</span>
+              <span className="category-label">{getTranslatedCategoryName(cat.name)}</span>
             </motion.div>
           );
         })}
@@ -364,10 +381,10 @@ function UserHome() {
       {/* Section Divider */}
       <div style={{ textAlign: 'left', marginBottom: 20 }}>
         <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
-          Nearby Providers
+          {t('nearbyProviders')}
         </h2>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-          Showing providers based on selected radius and category filters
+          {t('showingProvidersText')}
         </p>
       </div>
 
@@ -532,6 +549,7 @@ function UserHome() {
 
 function ProviderCard({ provider, navigate }) {
   const isOnline = useProviderPresence(provider.provider_id, provider.availability_status);
+  const { t } = useTranslation();
 
   return (
     <motion.div
@@ -558,7 +576,7 @@ function ProviderCard({ provider, navigate }) {
                 backgroundColor: isOnline ? 'var(--success)' : 'var(--error)',
                 boxShadow: isOnline ? '0 0 8px var(--success)' : 'none'
               }} />
-              {isOnline ? "Online" : "Offline"}
+              {isOnline ? t('onlineStatus') : t('offlineStatus')}
             </span>
           </div>
 
@@ -576,7 +594,7 @@ function ProviderCard({ provider, navigate }) {
                 letterSpacing: '0.02em',
                 textTransform: 'uppercase'
               }}>
-                Verified
+                {t('verifiedBadge')}
               </span>
             )}
           </h3>
@@ -588,7 +606,7 @@ function ProviderCard({ provider, navigate }) {
             </div>
             <div className="provider-meta-item">
               <FaBriefcase />
-              <span>{provider.experience} Yrs Exp</span>
+              <span>{t('experienceLabel', { count: provider.experience })}</span>
             </div>
           </div>
 
@@ -602,7 +620,7 @@ function ProviderCard({ provider, navigate }) {
           variant="primary"
           style={{ width: '100%', marginTop: 12 }}
         >
-          View Profile & Book
+          {t('viewProfileBtn')}
         </GlassButton>
       </GlassCard>
     </motion.div>
