@@ -603,10 +603,86 @@ const ProviderBookingCard = ({
   navigate,
   getStatusActions
 }) => {
+  const { socket } = useAuth();
   const { status } = useBookingStatus(booking.id);
   const currentStatus = status || booking.booking_status;
 
   const b = { ...booking, booking_status: currentStatus };
+
+  // Live location sharing states
+  const [isSharing, setIsSharing] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const [sharingError, setSharingError] = useState('');
+  
+  const watcherIdRef = useRef(null);
+  const lastSentTimeRef = useRef(null);
+
+  // Automatically clear watcher on status changes if inactive
+  useEffect(() => {
+    if (b.booking_status !== 'accepted' && b.booking_status !== 'on_the_way') {
+      if (watcherIdRef.current) {
+        navigator.geolocation.clearWatch(watcherIdRef.current);
+        watcherIdRef.current = null;
+      }
+      setIsSharing(false);
+      setCoords(null);
+    }
+  }, [b.booking_status]);
+
+  // Clean watcher on component unmount
+  useEffect(() => {
+    return () => {
+      if (watcherIdRef.current) {
+        navigator.geolocation.clearWatch(watcherIdRef.current);
+      }
+    };
+  }, []);
+
+  const toggleLocationSharing = () => {
+    if (isSharing) {
+      if (watcherIdRef.current) {
+        navigator.geolocation.clearWatch(watcherIdRef.current);
+        watcherIdRef.current = null;
+      }
+      setIsSharing(false);
+      setCoords(null);
+    } else {
+      if (!navigator.geolocation) {
+        setSharingError("Geolocation is not supported by this browser.");
+        return;
+      }
+
+      setSharingError("");
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setCoords({ latitude: lat, longitude: lng });
+
+          // Throttle updates to max 1 message every 5 seconds
+          const now = Date.now();
+          if (!lastSentTimeRef.current || (now - lastSentTimeRef.current >= 5000)) {
+            if (socket) {
+              socket.emit("provider:location:update", {
+                bookingId: b.id,
+                latitude: lat,
+                longitude: lng
+              });
+            }
+            lastSentTimeRef.current = now;
+          }
+        },
+        (err) => {
+          console.error("[GPS] Error in location watcher:", err.message);
+          setSharingError("GPS access denied or unavailable. Please enable permissions.");
+          setIsSharing(false);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+      );
+      watcherIdRef.current = watchId;
+      setIsSharing(true);
+    }
+  };
 
   return (
     <motion.div
@@ -679,6 +755,39 @@ const ProviderBookingCard = ({
             </p>
           </div>
         </div>
+
+        {['accepted', 'on_the_way'].includes(b.booking_status) && (
+          <div style={{ marginTop: '20px', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Live Route Location Sharing</p>
+                <p style={{ fontSize: '0.75rem', color: isSharing ? 'var(--success)' : 'var(--text-muted)', margin: '2px 0 0 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isSharing ? 'var(--success)' : '#ef4444', display: 'inline-block', boxShadow: isSharing ? '0 0 8px var(--success-glow)' : 'none' }}></span>
+                  {isSharing ? `Sharing Active: Lat=${coords?.latitude?.toFixed(5)}, Lng=${coords?.longitude?.toFixed(5)}` : 'Sharing Inactive'}
+                </p>
+                {sharingError && (
+                  <p style={{ fontSize: '0.72rem', color: 'var(--error)', margin: '4px 0 0 0' }}>{sharingError}</p>
+                )}
+              </div>
+              <button
+                onClick={toggleLocationSharing}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: isSharing ? 'rgba(239, 68, 68, 0.15)' : 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                  color: isSharing ? '#fca5a5' : '#ffffff',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                {isSharing ? 'Stop Sharing' : 'Share My Live Location'}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 12, marginTop: 20, borderTop: '1px dashed var(--glass-border)', paddingTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           {getStatusActions(b)}
