@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localserve-backend
+  labels:
+    app: localserve-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: localserve-backend
+  template:
+    metadata:
+      labels:
+        app: localserve-backend
+    spec:
+      containers:
+        - name: backend
+          image: localserve-backend:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: DB_HOST
+              value: "mysql-service"
+            - name: DB_USER
+              value: "root"
+            - name: DB_PASSWORD
+              value: "rootpassword"
+            - name: DB_NAME
+              value: "localserve_db"
+            - name: JWT_SECRET
+              value: "supersecretkey12345"

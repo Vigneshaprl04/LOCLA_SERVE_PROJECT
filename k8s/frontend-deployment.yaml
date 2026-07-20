@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localserve-frontend
+  labels:
+    app: localserve-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: localserve-frontend
+  template:
+    metadata:
+      labels:
+        app: localserve-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: localserve-frontend:latest
+          ports:
+            - containerPort: 80
