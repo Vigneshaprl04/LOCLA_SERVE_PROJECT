@@ -1,5 +1,7 @@
 "use strict";
 
+const webpush = require("web-push");
+const db = require("../config/db");
 const notificationRepository = require("../repositories/notificationRepository");
 
 class NotificationError extends Error {
@@ -9,17 +11,15 @@ class NotificationError extends Error {
   }
 }
 
-/**
- * Saves a notification and triggers real-time Socket.IO broadcast if socketServer is present.
- * 
- * @param {object} params
- * @param {number} params.userId
- * @param {number|null} params.bookingId
- * @param {string} params.title
- * @param {string} params.message
- * @param {string} params.type
- * @returns {Promise<object>} The stored notification
- */
+// Configure VAPID details for Web Push API
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    `mailto:${process.env.EMAIL_USER || "your_email@gmail.com"}`,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
 async function createNotification({ userId, bookingId, title, message, type }) {
   if (!userId) {
     throw new NotificationError("User ID is required", 400);
@@ -33,7 +33,7 @@ async function createNotification({ userId, bookingId, title, message, type }) {
     type
   });
 
-  // Emit to user's real-time room if socketServer is initialized
+  // 1. Emit to user's real-time room if socketServer is initialized
   try {
     const socketServer = require("../socket/socketServer");
     if (socketServer && typeof socketServer.broadcastNotification === "function") {
@@ -48,6 +48,50 @@ async function createNotification({ userId, bookingId, title, message, type }) {
     }
   } catch (err) {
     console.log("[NotificationService] Socket broadcast skipped (not configured yet):", err.message);
+  }
+
+  // 2. Dispatch live Web Push notifications to user's registered browser endpoints
+  try {
+    if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+      const [subs] = await db.query(
+        "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?",
+        [userId]
+      );
+
+      if (subs.length > 0) {
+        const payload = JSON.stringify({
+          title: notif.title,
+          body: notif.message,
+          data: {
+            url: notif.booking_id ? `/chat/${notif.booking_id}` : '/user/bookings'
+          }
+        });
+
+        const pushPromises = subs.map(sub => {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth
+            }
+          };
+          return webpush.sendNotification(pushSubscription, payload)
+            .catch(async (err) => {
+              // Delete expired/invalid endpoint subscriptions (404 Not Found or 410 Gone)
+              if (err.statusCode === 404 || err.statusCode === 410) {
+                console.log(`[Push] Cleaning up stale/expired subscription endpoint for user ${userId}`);
+                await db.query("DELETE FROM push_subscriptions WHERE endpoint = ?", [sub.endpoint]);
+              } else {
+                console.error(`[Push] Failed to send push to endpoint:`, err.message);
+              }
+            });
+        });
+
+        await Promise.all(pushPromises);
+      }
+    }
+  } catch (pushErr) {
+    console.error("[NotificationService] Push notification dispatch failed:", pushErr.message);
   }
 
   return notif;

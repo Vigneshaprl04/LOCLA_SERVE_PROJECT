@@ -8,6 +8,10 @@ import { ProviderPresenceProvider } from './context/ProviderPresenceContext.jsx'
 import { BookingProvider } from './context/BookingContext.jsx';
 import { ChatProvider } from './context/ChatContext.jsx';
 import { NotificationProvider } from './context/NotificationContext.jsx';
+import { registerServiceWorkerAndPush } from './pwaHelper';
+
+// Initialize PWA configurations and notifications subscription on startup
+registerServiceWorkerAndPush();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

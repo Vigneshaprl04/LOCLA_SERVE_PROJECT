@@ -8,6 +8,7 @@ import {
 
 import { getSocket, disconnectSocket } from "./socket/socketClient";
 import api from "./api";
+import { registerServiceWorkerAndPush } from "./pwaHelper";
 
 const AuthContext = createContext(null);
 
@@ -55,6 +56,9 @@ export const AuthProvider = ({ children }) => {
 
     setToken(authToken);
     setUser(user);
+
+    // Sync Web Push notification credentials
+    registerServiceWorkerAndPush();
 
     return user;
   };
