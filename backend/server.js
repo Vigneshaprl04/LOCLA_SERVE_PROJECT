@@ -25,10 +25,13 @@ app.set("trust proxy", 1);
 
 const server = http.createServer(app);
 
-const allowedOrigins = [
-    "http://localhost:5173",
-    "https://local-serve-frontend.netlify.app"
-];
+const isProduction = process.env.NODE_ENV === "production";
+
+// In production, start with only the deployed frontend URL.
+// In development, allow localhost for convenience.
+const allowedOrigins = isProduction
+    ? ["https://local-serve-frontend.netlify.app"]
+    : ["http://localhost:5173", "https://local-serve-frontend.netlify.app"];
 
 if (process.env.FRONTEND_URL) {
     const urls = process.env.FRONTEND_URL.split(",");
@@ -187,7 +190,10 @@ async function connectDB() {
         // Start server listening only after DB and migrations are ready
         const PORT = process.env.PORT || 5000;
         server.listen(PORT, () => {
-            console.log(`Server running on ${PORT}`);
+            console.log(`Server running on ${PORT} [${isProduction ? "PRODUCTION" : "DEVELOPMENT"}]`);
+            if (isProduction) {
+                console.log("Allowed CORS origins:", allowedOrigins.join(", "));
+            }
         });
     } catch (err) {
         console.error("❌ DB/Migration Error during startup:", err.message);
