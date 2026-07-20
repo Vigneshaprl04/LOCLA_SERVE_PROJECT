@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUser, FaLock, FaArrowLeft, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaLock, FaArrowLeft } from 'react-icons/fa';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import NotificationBell from '../components/NotificationBell';
+import GlassCard from '../components/ui/GlassCard';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { motion } from 'framer-motion';
 
+/**
+ * Redesigned Premium UserProfile screen.
+ * Integrates profile details, street address editor, and auth syncs.
+ */
 const UserProfile = () => {
   const { user, updateUserContext } = useAuth();
   const navigate = useNavigate();
@@ -94,14 +101,12 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 12, color: 'var(--text-muted)' }}>
-        <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
-        <p>Loading your profile...</p>
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader text="Opening profile configurations..." />
       </div>
     );
   }
 
-  // Get initials for profile avatar card
   const getInitials = (name) => {
     if (!name) return 'U';
     return name
@@ -113,183 +118,191 @@ const UserProfile = () => {
   };
 
   return (
-    <div style={{ maxWidth: '720px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}>
+    <motion.div 
+      style={{ maxWidth: '800px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Header title */}
-      <header style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={handleCancel} className="btn-outline" style={{ padding: 8, border: 'none', background: 'transparent', outline: 'none' }} title="Back">
+      <header style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <GlassButton onClick={handleCancel} variant="outline" style={{ padding: 8, border: 'none', background: 'transparent' }} title="Back">
           <FaArrowLeft size={16} />
-        </button>
+        </GlassButton>
         <div style={{ textAlign: 'left' }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>My Profile</h1>
-          <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)', fontSize: 14 }}>View and update your personal details</p>
+          <h1 style={{ fontSize: '2.0rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            My Profile
+          </h1>
+          <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>View and update your personal details</p>
         </div>
       </header>
 
       {/* Main card wrapper */}
-      <main className="card animated-fade-up">
-        
-        {/* Avatar badge */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28, gap: 10 }}>
-          <div style={{ width: 68, height: 68, borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)' }}>
-            {getInitials(formData.name)}
-          </div>
-          <span className="badge badge-accent" style={{ fontSize: 11 }}>
-            ROLE: {user?.role?.toUpperCase()}
-          </span>
-        </div>
-
-        {error && (
-          <div className="alert alert-danger" style={{ marginBottom: 20 }}>
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="alert alert-success" style={{ marginBottom: 20 }}>
-            {success}
-          </div>
-        )}
-
-        {/* Profile details form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <main>
+        <GlassCard hoverLift={false} style={{ padding: 36 }}>
           
-          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+          {/* Avatar badge */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32, gap: 12 }}>
+            <div style={{ width: 68, height: 68, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 0 15px rgba(124, 58, 237, 0.2)' }}>
+              {getInitials(formData.name)}
+            </div>
+            <span className="badge badge-accent" style={{ fontSize: 11 }}>
+              CUSTOMER ACCOUNT
+            </span>
+          </div>
+
+          {error && (
+            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="alert alert-success" style={{ marginBottom: 20 }}>
+              {success}
+            </div>
+          )}
+
+          {/* Profile details form */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             
-            <div className="form-group">
-              <label className="form-label">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={100}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={150}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={20}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Account Role (Locked)</label>
-              <div style={{ position: 'relative', width: '100%' }}>
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+              
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
                 <input
                   type="text"
-                  value={user?.role || 'user'}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   className="form-control"
-                  style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed', paddingRight: '36px' }}
-                  disabled
+                  maxLength={100}
+                  required
                 />
-                <FaLock style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.6 }} />
               </div>
+
+              <div className="form-group">
+                <label className="form-label">Email Address *</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="form-control"
+                  maxLength={150}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="form-control"
+                  maxLength={20}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Account Role (Locked)</label>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type="text"
+                    value={user?.role || 'user'}
+                    className="form-control"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.02)', cursor: 'not-allowed', paddingRight: '36px' }}
+                    disabled
+                  />
+                  <FaLock style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)', opacity: 0.6 }} />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Street Address</label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="form-control"
+                  style={{ height: '70px', resize: 'none' }}
+                  maxLength={250}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Area / Locality</label>
+                <input
+                  type="text"
+                  name="area"
+                  value={formData.area}
+                  onChange={handleChange}
+                  className="form-control"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">City</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="form-control"
+                  maxLength={100}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Pincode</label>
+                <input
+                  type="text"
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  className="form-control"
+                  maxLength={10}
+                />
+              </div>
+
             </div>
 
-            <div className="form-group" style={{ gridColumn: 'span 2' }}>
-              <label className="form-label">Street Address</label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="form-control"
-                style={{ height: '60px', resize: 'none' }}
-                maxLength={250}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Area / Locality</label>
-              <input
-                type="text"
-                name="area"
-                value={formData.area}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={100}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">City</label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={100}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Pincode</label>
-              <input
-                type="text"
-                name="pincode"
-                value={formData.pincode}
-                onChange={handleChange}
-                className="form-control"
-                maxLength={10}
-              />
-            </div>
-
-          </div>
-
-          {/* Action Button Row */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 12,
-              marginTop: 16,
-              borderTop: '1px solid var(--border)',
-              paddingTop: 20
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="btn-outline"
-              disabled={saving}
+            {/* Action Button Row */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 12,
+                marginTop: 10,
+                borderTop: '1px solid var(--glass-border)',
+                paddingTop: 24
+              }}
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+              <GlassButton
+                type="button"
+                onClick={handleCancel}
+                variant="outline"
+                disabled={saving}
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton
+                type="submit"
+                variant="primary"
+                disabled={saving}
+              >
+                Save Changes
+              </GlassButton>
+            </div>
 
-        </form>
+          </form>
 
+        </GlassCard>
       </main>
 
-      {/* Responsive columns style override */}
       <style>{`
         @media (max-width: 600px) {
           .form-grid {
@@ -297,7 +310,7 @@ const UserProfile = () => {
           }
         }
       `}</style>
-    </div>
+    </motion.div>
   );
 };
 

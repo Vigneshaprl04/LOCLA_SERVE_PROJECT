@@ -1,19 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import GlassCard from "../components/ui/GlassCard";
+import GlassButton from "../components/ui/GlassButton";
+import Loader from "../components/ui/Loader";
 import { 
   FaArrowLeft, 
   FaRobot, 
   FaMapMarkerAlt, 
   FaStar, 
-  FaTools, 
   FaCheckCircle, 
   FaExclamationTriangle, 
   FaSync, 
   FaBriefcase,
   FaChevronRight
 } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
+/**
+ * Redesigned Premium AIServiceAssistant screen.
+ * Futuristic layout with interactive conversation models and real-time provider suggestions.
+ */
 function AIServiceAssistant() {
   const navigate = useNavigate();
 
@@ -73,8 +80,6 @@ function AIServiceAssistant() {
     setError("");
     setLoading(true);
 
-    // Build conversation context for backend format
-    // Backend expects array of: { role: 'user' | 'model', content: '...' }
     const formattedContext = conversation.map(item => ({
       role: item.role === "assistant" ? "model" : "user",
       content: item.content
@@ -155,72 +160,81 @@ function AIServiceAssistant() {
   };
 
   return (
-    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px", boxSizing: "border-box", width: "100%" }}>
+    <motion.div 
+      style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px", boxSizing: "border-box", width: "100%" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       
       {/* Top navigation */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <button onClick={() => navigate("/user/home")} className="btn-outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <GlassButton onClick={() => navigate("/user/home")} variant="outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <FaArrowLeft /> Back to Home
-        </button>
-        <button onClick={handleReset} className="btn-outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        </GlassButton>
+        <GlassButton onClick={handleReset} variant="outline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <FaSync /> Start New Analysis
-        </button>
+        </GlassButton>
       </div>
 
       {/* Hero Header */}
-      <div 
-        className="card animate-fade-up" 
+      <GlassCard 
+        hoverLift={false} 
         style={{ 
-          background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
-          color: "#ffffff",
+          background: "linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%)",
           marginBottom: 30,
-          border: "none",
-          textAlign: "left"
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          textAlign: "left",
+          padding: 32
         }}
       >
-        <h1 style={{ color: "#ffffff", fontSize: "2rem", fontWeight: 900, marginBottom: 8, letterSpacing: "-0.03em", display: "flex", alignItems: "center", gap: 12 }}>
-          <FaRobot /> AI Local Service Assistant
+        <h1 style={{ fontSize: "1.8rem", fontWeight: 900, marginBottom: 8, letterSpacing: "-0.03em", display: "flex", alignItems: "center", gap: 12, color: 'var(--text-main)', background: 'none', WebkitTextFillColor: 'initial' }}>
+          <FaRobot style={{ color: 'var(--accent)' }} /> AI Local Service Assistant
         </h1>
-        <p style={{ color: "var(--primary-light)", fontSize: "1rem", margin: 0, maxWidth: 640 }}>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", margin: 0, maxWidth: 700, lineHeight: 1.55 }}>
           Describe your problem in plain words, and our AI will automatically identify the category, offer safety guidance, and match you with the best available local providers.
         </p>
-      </div>
+      </GlassCard>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }} className="responsive-grid">
         
         {/* Left Column: Chat Conversation */}
-        <div className="card" style={{ display: "flex", flexDirection: "column", minHeight: "450px", justifyContent: "space-between" }}>
+        <GlassCard hoverLift={false} style={{ display: "flex", flexDirection: "column", minHeight: "480px", justifyContent: "space-between", padding: 28 }}>
           
           <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 16px 0", borderBottom: "1px solid var(--border-color)", paddingBottom: 10 }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 20px 0", borderBottom: "1px solid var(--glass-border)", paddingBottom: 12, background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
               AI Conversation Log
             </h3>
             
             {conversation.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
-                <FaRobot size={40} style={{ opacity: 0.5, marginBottom: 12 }} />
-                <p style={{ margin: 0 }}>Type your issue below to get started. You can type in simple words like: <em>"My kitchen sink is leaking water everywhere"</em> or <em>"Power cut only in my room"</em>.</p>
+                <FaRobot size={40} style={{ opacity: 0.5, marginBottom: 16, color: 'var(--accent)' }} />
+                <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>Type your issue below to get started. You can type in simple words like: <em>"My kitchen sink is leaking water everywhere"</em> or <em>"Power cut only in my room"</em>.</p>
               </div>
             ) : (
               <div style={{ maxHeight: "350px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 5 }}>
                 {conversation.map((msg, index) => (
-                  <div 
+                  <motion.div 
                     key={index}
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.25 }}
                     style={{
                       alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                      background: msg.role === "user" ? "var(--primary)" : "var(--bg-app)",
+                      background: msg.role === "user" ? "var(--accent)" : "rgba(255, 255, 255, 0.03)",
                       color: msg.role === "user" ? "#ffffff" : "var(--text-main)",
-                      padding: "10px 14px",
-                      borderRadius: "12px",
-                      borderBottomRightRadius: msg.role === "user" ? "2px" : "12px",
-                      borderBottomLeftRadius: msg.role === "assistant" ? "2px" : "12px",
+                      padding: "10px 16px",
+                      borderRadius: "16px",
+                      borderBottomRightRadius: msg.role === "user" ? "2px" : "16px",
+                      borderBottomLeftRadius: msg.role === "assistant" ? "2px" : "16px",
                       maxWidth: "85%",
                       fontSize: "0.9rem",
-                      lineHeight: "1.4"
+                      lineHeight: "1.45",
+                      border: msg.role === "assistant" ? "1px solid var(--glass-border)" : "none"
                     }}
                   >
                     {msg.content}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -228,18 +242,18 @@ function AIServiceAssistant() {
 
           <div style={{ marginTop: 20 }}>
             {/* Geolocation assistance */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-              <button 
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+              <GlassButton 
                 type="button" 
                 onClick={handleGetLocation} 
                 disabled={locating}
-                className="btn-outline" 
+                variant="outline" 
                 style={{ fontSize: "0.75rem", padding: "6px 12px" }}
               >
                 <FaMapMarkerAlt /> {locating ? "Acquiring..." : "Use My Location"}
-              </button>
+              </GlassButton>
               {location && (
-                <span style={{ fontSize: "0.75rem", color: "var(--success)", fontWeight: 600 }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--success)", fontWeight: 700 }}>
                   Location Active
                 </span>
               )}
@@ -249,12 +263,12 @@ function AIServiceAssistant() {
             </div>
 
             {error && (
-              <div className="alert alert-danger" style={{ fontSize: "0.85rem", padding: "8px 12px", marginBottom: 10 }}>
+              <div className="alert alert-danger" style={{ fontSize: "0.85rem", padding: "8px 12px", marginBottom: 12 }}>
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleAnalyze} style={{ display: "flex", gap: 8 }}>
+            <form onSubmit={handleAnalyze} style={{ display: "flex", gap: 10 }}>
               <input
                 type="text"
                 placeholder={
@@ -269,68 +283,76 @@ function AIServiceAssistant() {
                 disabled={loading}
                 required
               />
-              <button 
+              <GlassButton 
                 type="submit" 
-                className="btn-primary" 
-                style={{ height: "42px", display: "flex", alignItems: "center", gap: 6 }}
+                variant="primary" 
+                style={{ height: "42px", padding: '0 20px' }}
                 disabled={loading}
               >
                 {loading ? "Analyzing..." : "Send"}
-              </button>
+              </GlassButton>
             </form>
           </div>
 
-        </div>
+        </GlassCard>
 
         {/* Right Column: Results & Matched Providers */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           
           {/* Analysis Summary Card */}
-          {lastAnalysis && (
-            <div className="card animate-fade-up">
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 12px 0" }}>
-                AI Analysis Result
-              </h3>
+          <AnimatePresence>
+            {lastAnalysis && (
+              <motion.div 
+                initial={{ y: 15, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 15, opacity: 0 }}
+              >
+                <GlassCard hoverLift={false} style={{ padding: 28 }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 16px 0", background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+                    AI Analysis Result
+                  </h3>
 
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                <span className={`badge ${lastAnalysis.status === 'matched' ? 'badge-success' : lastAnalysis.status === 'needs_clarification' ? 'badge-warning' : 'badge-danger'}`}>
-                  Status: {lastAnalysis.status.toUpperCase().replace('_', ' ')}
-                </span>
-                {lastAnalysis.serviceCategory && (
-                  <span className="badge badge-accent">
-                    Category: {lastAnalysis.serviceCategory}
-                  </span>
-                )}
-                {lastAnalysis.urgency && (
-                  <span className={`badge ${getUrgencyBadgeClass(lastAnalysis.urgency)}`}>
-                    Urgency: {lastAnalysis.urgency}
-                  </span>
-                )}
-              </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                    <span className={`badge ${lastAnalysis.status === 'matched' ? 'badge-success' : lastAnalysis.status === 'needs_clarification' ? 'badge-warning' : 'badge-danger'}`}>
+                      {lastAnalysis.status.toUpperCase().replace('_', ' ')}
+                    </span>
+                    {lastAnalysis.serviceCategory && (
+                      <span className="badge badge-accent">
+                        {lastAnalysis.serviceCategory}
+                      </span>
+                    )}
+                    {lastAnalysis.urgency && (
+                      <span className={`badge ${getUrgencyBadgeClass(lastAnalysis.urgency)}`}>
+                        {lastAnalysis.urgency} Urgency
+                      </span>
+                    )}
+                  </div>
 
-              {lastAnalysis.issueSummary && (
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "block" }}>Problem Summary</span>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 500 }}>{lastAnalysis.issueSummary}</span>
-                </div>
-              )}
+                  {lastAnalysis.issueSummary && (
+                    <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-light)", display: "block", textTransform: 'uppercase', fontWeight: 700 }}>Problem Summary</span>
+                      <span style={{ fontSize: "0.95rem", color: "var(--text-main)" }}>{lastAnalysis.issueSummary}</span>
+                    </div>
+                  )}
 
-              {lastAnalysis.recommendation && (
-                <div style={{ padding: "10px 14px", backgroundColor: "var(--accent-light)", borderRadius: "var(--radius-sm)", borderLeft: "4px solid var(--accent)", marginBottom: 12 }}>
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontWeight: "bold" }}>
-                    <FaCheckCircle style={{ color: "var(--accent)" }} /> Recommended Action / Safety Advice
-                  </span>
-                  <p style={{ margin: "4px 0 0 0", fontSize: "0.875rem", color: "var(--text-main)" }}>
-                    {lastAnalysis.recommendation}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                  {lastAnalysis.recommendation && (
+                    <div style={{ padding: "12px 16px", backgroundColor: "rgba(6, 182, 212, 0.05)", borderRadius: "var(--radius-md)", borderLeft: "4px solid var(--accent)", marginBottom: 0, textAlign: 'left' }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--accent)", display: "flex", alignItems: "center", gap: 6, fontWeight: "bold" }}>
+                        <FaCheckCircle /> Recommended Action / Safety Advice
+                      </span>
+                      <p style={{ margin: "6px 0 0 0", fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.45 }}>
+                        {lastAnalysis.recommendation}
+                      </p>
+                    </div>
+                  )}
+                </GlassCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Providers Grid */}
-          <div className="card" style={{ flex: 1 }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 16px 0" }}>
+          <GlassCard hoverLift={false} style={{ flex: 1, padding: 28 }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 800, margin: "0 0 20px 0", background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
               Matching Service Providers
             </h3>
 
@@ -341,31 +363,28 @@ function AIServiceAssistant() {
                 ))}
               </div>
             ) : lastAnalysis?.status !== "matched" ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)" }}>
-                <p style={{ margin: 0 }}>Matched providers will appear here once the service category is successfully identified.</p>
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-light)" }}>
+                <p style={{ margin: 0, fontSize: '0.9rem' }}>Matched providers will appear here once the service category is successfully identified.</p>
               </div>
             ) : matchedProviders.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)" }}>
-                <FaExclamationTriangle size={30} style={{ color: "var(--warning)", marginBottom: 10 }} />
-                <p style={{ margin: 0 }}>No verified and available providers found in this area for this category. Please try a different location or check back later.</p>
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-light)" }}>
+                <FaExclamationTriangle size={30} style={{ color: "var(--warning)", marginBottom: 12 }} />
+                <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>No verified and available providers found in this area for this category. Please try a different location or check back later.</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {matchedProviders.map(provider => (
-                  <div 
+                  <GlassCard 
                     key={provider.provider_id}
-                    className="card-lift"
+                    hoverLift={true}
                     style={{ 
-                      padding: "16px", 
-                      borderRadius: "var(--radius-md)", 
-                      border: "1px solid var(--border-color)", 
-                      background: "var(--bg-card)",
+                      padding: "20px", 
                       textAlign: "left"
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <div>
-                        <h4 style={{ margin: "0 0 4px 0", fontSize: "1rem", fontWeight: 700 }}>
+                        <h4 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", fontWeight: 800, color: 'var(--text-main)', background: 'none', WebkitTextFillColor: 'initial' }}>
                           {provider.name}
                         </h4>
                         <div style={{ display: "flex", gap: 10, fontSize: "0.8rem", color: "var(--text-muted)" }}>
@@ -384,41 +403,48 @@ function AIServiceAssistant() {
                       </div>
                       
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Match Score</div>
-                        <span className="badge badge-success" style={{ fontWeight: "bold", fontSize: "0.85rem" }}>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Match Score</div>
+                        <span className="badge badge-success" style={{ fontWeight: "bold", fontSize: "0.8rem", marginTop: 4 }}>
                           {provider.matchScore}% Match
                         </span>
                       </div>
                     </div>
 
-                    <p style={{ margin: "0 0 12px 0", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                    <p style={{ margin: "0 0 14px 0", fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.45 }}>
                       {provider.description || "No additional description provided."}
                     </p>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: "1px solid var(--border-color)" }}>
-                      <span style={{ fontSize: "0.75rem", color: "var(--primary)", fontWeight: 500 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: "1px solid var(--glass-border)" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--accent)", fontWeight: 600 }}>
                         {provider.matchReason}
                       </span>
-                      <button 
+                      <GlassButton 
                         onClick={() => navigate(`/providers/${provider.provider_id}`)}
-                        className="btn-primary"
+                        variant="primary"
                         style={{ padding: "6px 12px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: 4 }}
                       >
                         View & Book <FaChevronRight size={10} />
-                      </button>
+                      </GlassButton>
                     </div>
-                  </div>
+                  </GlassCard>
                 ))}
               </div>
             )}
 
-          </div>
+          </GlassCard>
 
         </div>
 
       </div>
 
-    </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .responsive-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </motion.div>
   );
 }
 

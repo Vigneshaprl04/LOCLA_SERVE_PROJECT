@@ -2,10 +2,18 @@ import { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
-import { FaTimesCircle, FaCalendarAlt, FaComments, FaSync, FaPowerOff, FaLocationArrow } from 'react-icons/fa';
+import GlassCard from '../components/ui/GlassCard';
+import GlassButton from '../components/ui/GlassButton';
+import Loader from '../components/ui/Loader';
+import { FaTimesCircle, FaCalendarAlt, FaComments, FaSync, FaPowerOff, FaLocationArrow, FaChartLine, FaWallet, FaTasks } from 'react-icons/fa';
 import { BookingContext } from '../context/BookingContext';
 import { useBookingStatus } from '../hooks/useBookingStatus';
+import { motion, AnimatePresence } from 'framer-motion';
 
+/**
+ * Redesigned Premium Provider Dashboard screen.
+ * Integrates location reporting, online presence toggles, and dynamic metrics.
+ */
 const ProviderDashboard = () => {
   const { user, socket } = useAuth();
   const navigate = useNavigate();
@@ -116,7 +124,6 @@ const ProviderDashboard = () => {
       }
     };
 
-    // Send immediately on mount/load, and then every 30 seconds
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 30000);
 
@@ -282,140 +289,155 @@ const ProviderDashboard = () => {
     switch (booking.booking_status) {
       case 'pending':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: '300px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: '340px' }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Estimated Price (₹) *</label>
               <input
                 type="number"
                 min="1"
-                placeholder="Enter price"
+                placeholder="Enter price estimate"
                 className="form-control"
-                style={{ padding: '6px 12px', fontSize: 13, height: '36px' }}
+                style={{ padding: '8px 14px', fontSize: 13, height: '38px' }}
                 value={prices[bookingId] || ''}
                 onChange={(e) => setPrices({ ...prices, [bookingId]: e.target.value })}
                 required
               />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
+            <div style={{ display: 'flex', gap: 10 }}>
+              <GlassButton
                 disabled={disabled || !prices[bookingId] || Number(prices[bookingId]) <= 0}
-                className="btn-primary"
-                style={{ padding: '8px 16px', fontSize: 13, flex: 1 }}
+                variant="primary"
                 onClick={() => handleSendQuote(bookingId, prices[bookingId])}
+                style={{ fontSize: 12, padding: '8px 12px', flex: 1 }}
               >
                 Send Quote
-              </button>
-              <button
+              </GlassButton>
+              <GlassButton
                 disabled={disabled}
-                className="btn-danger"
-                style={{ padding: '8px 16px', fontSize: 13, flex: 1 }}
+                variant="danger"
                 onClick={() => updateBookingStatus(bookingId, 'rejected')}
+                style={{ fontSize: 12, padding: '8px 12px', flex: 1 }}
               >
                 Reject Order
-              </button>
+              </GlassButton>
             </div>
           </div>
         );
 
       case 'quoted':
-        return <span className="badge badge-warning" style={{ fontSize: 11 }}>Quote Sent (Waiting for Customer)</span>;
+        return <span className="badge badge-warning" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Waiting for Customer</span>;
 
       case 'quote_rejected':
-        return <span className="badge badge-danger" style={{ fontSize: 11 }}>Quote Rejected by Customer</span>;
+        return <span className="badge badge-danger" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Quote Rejected by Customer</span>;
 
       case 'accepted':
         return (
-          <button
+          <GlassButton
             disabled={disabled}
-            className="btn-secondary"
-            style={{ padding: '8px 16px', fontSize: 13 }}
+            variant="secondary"
             onClick={() => updateBookingStatus(bookingId, 'on_the_way')}
+            style={{ fontSize: 12, padding: '8px 16px' }}
           >
             Start Transit
-          </button>
+          </GlassButton>
         );
 
       case 'on_the_way':
         return (
-          <button
+          <GlassButton
             disabled={disabled}
-            className="btn-secondary"
-            style={{ padding: '8px 16px', fontSize: 13 }}
+            variant="secondary"
             onClick={() => updateBookingStatus(bookingId, 'work_started')}
+            style={{ fontSize: 12, padding: '8px 16px' }}
           >
             Start Service Work
-          </button>
+          </GlassButton>
         );
 
       case 'work_started':
         return (
-          <button
+          <GlassButton
             disabled={disabled}
-            className="btn-primary"
-            style={{ padding: '8px 16px', fontSize: 13 }}
+            variant="primary"
             onClick={() => updateBookingStatus(bookingId, 'completed')}
+            style={{ fontSize: 12, padding: '8px 16px' }}
           >
             Complete Service
-          </button>
+          </GlassButton>
         );
 
       case 'completed':
-        return <span className="badge badge-success" style={{ fontSize: 11 }}>Service Completed</span>;
+        return <span className="badge badge-success" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Service Completed</span>;
 
       case 'rejected':
-        return <span className="badge badge-danger" style={{ fontSize: 11 }}>Booking Rejected</span>;
+        return <span className="badge badge-danger" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Booking Rejected</span>;
 
       case 'cancelled':
-        return <span className="badge badge-danger" style={{ fontSize: 11 }}>Booking Cancelled</span>;
+        return <span className="badge badge-danger" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Booking Cancelled</span>;
 
       default:
         return null;
     }
   };
 
+  if (loading && bookings.length === 0) {
+    return (
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader text="Opening partner analytics dashboard..." />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: '1000px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}>
+    <motion.div 
+      style={{ maxWidth: '1100px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       
       {/* Header */}
-      <header style={{ marginBottom: 24, textAlign: 'left' }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: '-0.03em' }}>Partner Dashboard</h1>
-        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+      <header style={{ marginBottom: 32, textAlign: 'left' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', background: 'var(--gradient-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          Partner Dashboard
+        </h1>
+        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
           Welcome back, {user?.name || 'Service Partner'}
         </p>
       </header>
 
       {error && (
-        <div className="alert alert-danger animate-shake" style={{ marginBottom: 20 }}>
+        <div className="alert alert-danger" style={{ marginBottom: 24 }}>
           {error}
         </div>
       )}
 
       {message && (
-        <div className="alert alert-success" style={{ marginBottom: 20 }}>
+        <div className="alert alert-success" style={{ marginBottom: 24 }}>
           {message}
         </div>
       )}
 
       {/* Stats Summary & Availability Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 30 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 40 }}>
         
         {/* Availability Geolocation Card */}
-        <section className="card animate-fade-up">
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FaLocationArrow style={{ color: 'var(--primary)', fontSize: 14 }} /> Duty Status
+        <GlassCard hoverLift={false} style={{ padding: 28 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 16, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+            <FaLocationArrow style={{ color: 'var(--accent)', fontSize: 14 }} /> Duty Status
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, textAlign: 'left' }}>
             <div>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Work Channel:</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Work Channel:</p>
               <span className={`badge ${availability ? 'badge-success' : 'badge-warning'}`}>
-                {availability ? 'ONLINE / ACCEPTING JOBS' : 'OFFLINE / NOT ACCEPTING JOBS'}
+                {availability ? 'ONLINE' : 'OFFLINE'}
               </span>
             </div>
 
             {(latitude !== null && longitude !== null) && (
-              <div style={{ padding: '10px 12px', background: 'rgba(99,102,241,0.06)', borderRadius: 8, border: '1px solid rgba(99,102,241,0.15)', fontSize: 13 }}>
-                <p style={{ margin: '0 0 6px 0', fontWeight: 600, fontSize: 12, color: 'var(--text-muted)' }}>
-                  📍 Current Location
+              <div style={{ padding: '12px 14px', background: 'rgba(6, 182, 212, 0.04)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(6, 182, 212, 0.15)', fontSize: 13 }}>
+                <p style={{ margin: '0 0 6px 0', fontWeight: 700, fontSize: 12, color: 'var(--text-muted)' }}>
+                  📍 Current Coordinates
                 </p>
                 <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-main)' }}>
                   Lat: {Number(latitude).toFixed(6)}
@@ -424,120 +446,124 @@ const ProviderDashboard = () => {
                   Lng: {Number(longitude).toFixed(6)}
                 </div>
                 {accuracy !== null && (
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Accuracy: ±{Math.round(accuracy)} m
+                  <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 4 }}>
+                    Accuracy bounds: ±{Math.round(accuracy)} m
                   </div>
                 )}
                 {lastLocationUpdate && (
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                    Last update: {new Date(lastLocationUpdate).toLocaleString()}
+                  <div style={{ fontSize: 11, color: 'var(--text-light)', marginTop: 2 }}>
+                    Last sync: {new Date(lastLocationUpdate).toLocaleString()}
                   </div>
                 )}
               </div>
             )}
 
             {geoLoading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--primary)', padding: '4px 0' }}>
-                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>🌀</span>
-                Acquiring GPS location…
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--accent)', padding: '4px 0' }}>
+                <span className="animate-spin" style={{ display: 'inline-block' }}>🌀</span>
+                Locating active GPS...
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
               {!availability ? (
-                <button
+                <GlassButton
                   onClick={handleGoOnline}
-                  className="btn-primary"
-                  style={{ width: '100%', padding: '9px 14px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  variant="primary"
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   disabled={apiLoading || geoLoading}
                 >
                   <FaPowerOff style={{ fontSize: 12 }} />
-                  {geoLoading ? 'Locating…' : apiLoading ? 'Going Online…' : 'Go Online at Current Location'}
-                </button>
+                  {geoLoading ? 'Locating…' : apiLoading ? 'Connecting…' : 'Go Online'}
+                </GlassButton>
               ) : (
                 <>
-                  <button
+                  <GlassButton
                     onClick={handleGoOnline}
-                    className="btn-outline"
-                    style={{ flex: 1, padding: '9px 10px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                    variant="outline"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     disabled={apiLoading || geoLoading}
-                    title="Refresh your current GPS location"
+                    title="Refresh location coordinates"
                   >
-                    <FaSync style={{ fontSize: 11, animation: (apiLoading || geoLoading) ? 'spin 1s linear infinite' : 'none' }} />
-                    {geoLoading || apiLoading ? 'Refreshing…' : 'Refresh Location'}
-                  </button>
-                  <button
+                    <FaSync style={{ fontSize: 11 }} /> Sync GPS
+                  </GlassButton>
+                  <GlassButton
                     onClick={handleGoOffline}
-                    className="btn-primary"
-                    style={{ flex: 1, padding: '9px 10px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#ef4444', borderColor: '#ef4444' }}
+                    variant="danger"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     disabled={apiLoading || geoLoading}
                   >
-                    <FaTimesCircle style={{ fontSize: 11 }} />
-                    {apiLoading ? 'Going Offline…' : 'Go Offline'}
-                  </button>
+                    <FaTimesCircle style={{ fontSize: 11 }} /> Go Offline
+                  </GlassButton>
                 </>
               )}
             </div>
           </div>
-        </section>
+        </GlassCard>
 
         {/* Stats Card */}
-        <section className="card animate-fade-up" style={{ animationDelay: '100ms' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>Overview metrics</h2>
-          <div style={{ display: 'flex', gap: 24 }}>
+        <GlassCard hoverLift={false} style={{ padding: 28 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 16, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+            <FaTasks style={{ color: 'var(--accent)', fontSize: 14 }} /> Overview Metrics
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 12 }}>
             <div style={{ textAlign: 'left' }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Pending</p>
-              <span style={{ fontSize: 24, fontWeight: 800, color: pendingCount > 0 ? 'var(--warning)' : 'var(--text-main)' }}>
+              <span style={{ fontSize: 32, fontWeight: 900, color: pendingCount > 0 ? 'var(--warning)' : 'var(--text-main)' }}>
                 {pendingCount}
               </span>
             </div>
             <div style={{ textAlign: 'left' }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Active</p>
-              <span style={{ fontSize: 24, fontWeight: 800, color: activeCount > 0 ? 'var(--primary)' : 'var(--text-main)' }}>
+              <span style={{ fontSize: 32, fontWeight: 900, color: activeCount > 0 ? 'var(--accent)' : 'var(--text-main)' }}>
                 {activeCount}
               </span>
             </div>
             <div style={{ textAlign: 'left' }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Completed</p>
-              <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--success)' }}>
+              <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--success)' }}>
                 {completedCount}
               </span>
             </div>
           </div>
-        </section>
+        </GlassCard>
 
         {/* Earnings Card */}
-        <section className="card animate-fade-up" style={{ animationDelay: '150ms' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>Earnings & Payments</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, textAlign: 'left' }}>
+        <GlassCard hoverLift={false} style={{ padding: 28 }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: 16, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+            <FaWallet style={{ color: 'var(--accent)', fontSize: 14 }} /> Earnings & Revenue
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, textAlign: 'left' }}>
             <div>
               <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Today</p>
-              <strong style={{ fontSize: 16, color: 'var(--success)' }}>₹{earnings.todayEarnings.toFixed(2)}</strong>
+              <strong style={{ fontSize: 18, color: 'var(--success)', fontWeight: 800 }}>₹{earnings.todayEarnings.toFixed(2)}</strong>
             </div>
             <div>
               <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>This Week</p>
-              <strong style={{ fontSize: 16, color: 'var(--primary)' }}>₹{earnings.weeklyEarnings.toFixed(2)}</strong>
+              <strong style={{ fontSize: 18, color: 'var(--primary-light)', fontWeight: 800 }}>₹{earnings.weeklyEarnings.toFixed(2)}</strong>
             </div>
             <div>
               <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>This Month</p>
-              <strong style={{ fontSize: 16, color: 'var(--text-main)' }}>₹{earnings.monthlyEarnings.toFixed(2)}</strong>
+              <strong style={{ fontSize: 18, color: 'var(--text-main)', fontWeight: 800 }}>₹{earnings.monthlyEarnings.toFixed(2)}</strong>
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Average Job</p>
-              <strong style={{ fontSize: 16, color: 'var(--accent)' }}>₹{earnings.averageEarnings.toFixed(2)}</strong>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Job Avg</p>
+              <strong style={{ fontSize: 18, color: 'var(--accent)', fontWeight: 800 }}>₹{earnings.averageEarnings.toFixed(2)}</strong>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 8, fontSize: '11px', color: 'var(--text-muted)' }}>
-            <span>Paid Jobs: <strong style={{ color: 'var(--success)' }}>{earnings.completedPayments}</strong></span>
+          <div style={{ display: 'flex', gap: 12, marginTop: 16, borderTop: '1px solid var(--glass-border)', paddingTop: 10, fontSize: '11px', color: 'var(--text-muted)' }}>
+            <span>Settled: <strong style={{ color: 'var(--success)' }}>{earnings.completedPayments}</strong></span>
             <span>Pending: <strong style={{ color: 'var(--warning)' }}>{earnings.pendingPayments}</strong></span>
-            <span>Failed: <strong style={{ color: '#ef4444' }}>{earnings.failedPayments}</strong></span>
+            <span>Failed: <strong style={{ color: 'var(--error)' }}>{earnings.failedPayments}</strong></span>
           </div>
-        </section>
+        </GlassCard>
       </div>
 
       {/* Bookings List */}
       <section style={{ textAlign: 'left' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, letterSpacing: '-0.02em' }}>Assigned Service Bookings</h2>
+        <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginBottom: 20, letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+          Assigned Service Bookings
+        </h2>
         
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -550,11 +576,11 @@ const ProviderDashboard = () => {
             ))}
           </div>
         ) : bookings.length === 0 ? (
-          <div className="card" style={{ padding: 50, textAlign: 'center' }}>
+          <GlassCard hoverLift={false} style={{ padding: 50, textAlign: 'center' }}>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.95rem' }}>No service bookings requested or assigned yet.</p>
-          </div>
+          </GlassCard>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {bookings.map((booking, index) => (
               <ProviderBookingCard
                 key={booking.id}
@@ -567,7 +593,7 @@ const ProviderDashboard = () => {
           </div>
         )}
       </section>
-    </div>
+    </motion.div>
   );
 };
 
@@ -583,79 +609,90 @@ const ProviderBookingCard = ({
   const b = { ...booking, booking_status: currentStatus };
 
   return (
-    <article
-      key={b.id}
-      className="card animate-fade-up"
-      style={{ 
-        animationDelay: `${index * 50}ms`, 
-        borderLeft: `4px solid ${
-          b.booking_status === 'completed' ? 'var(--success)' :
-          b.booking_status === 'pending' ? 'var(--warning)' : 'var(--primary)'
-        }` 
-      }}
+    <motion.div
+      initial={{ y: 15, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
-        <div>
-          <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-            Booking #{b.id}
-          </h3>
-          <p style={{ fontSize: 13, margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-            Customer: <strong>{b.customer_name}</strong> &bull; {b.customer_phone || 'No phone number'}
-          </p>
-        </div>
-        
-        <div style={{ display: 'flex', gap: 8 }}>
-          <span className="badge badge-accent">
-            {b.category_name}
-          </span>
-          <span className={`badge ${
-            b.booking_status === 'pending' || b.booking_status === 'quoted' ? 'badge-warning' :
-            b.booking_status === 'rejected' || b.booking_status === 'cancelled' || b.booking_status === 'quote_rejected' ? 'badge-danger' :
-            'badge-success'
-          }`}>
-            {b.booking_status.replace(/_/g, ' ').toUpperCase()}
-          </span>
-        </div>
-      </div>
+      <GlassCard 
+        hoverLift={true}
+        style={{
+          padding: 28,
+          textAlign: 'left'
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '4px',
+          background: b.booking_status === 'completed' ? 'var(--success)' :
+                      b.booking_status === 'pending' ? 'var(--warning)' : 
+                      'linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%)',
+          boxShadow: b.booking_status === 'completed' ? '0 0 10px var(--success-glow)' : 'none'
+        }} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, borderTop: '1px solid var(--border-color)', paddingTop: 14 }}>
-        <div>
-          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Description:</strong></p>
-          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{b.service_description}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', background: 'none', WebkitTextFillColor: 'initial', color: 'var(--text-main)' }}>
+              Booking #{b.id}
+            </h3>
+            <p style={{ fontSize: '0.9rem', margin: '4px 0 0 0', color: 'var(--text-muted)' }}>
+              Customer: <strong>{b.customer_name}</strong> &bull; {b.customer_phone || 'No phone number'}
+            </p>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span className="badge badge-accent">
+              {b.category_name}
+            </span>
+            <span className={`badge ${
+              b.booking_status === 'pending' || b.booking_status === 'quoted' ? 'badge-warning' :
+              b.booking_status === 'rejected' || b.booking_status === 'cancelled' || b.booking_status === 'quote_rejected' ? 'badge-danger' :
+              'badge-success'
+            }`}>
+              {b.booking_status.replace(/_/g, ' ').toUpperCase()}
+            </span>
+          </div>
         </div>
 
-        <div>
-          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Location Address:</strong></p>
-          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>{b.service_address}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
+          <div>
+            <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', fontWeight: 700, marginBottom: 4 }}>Job Details</p>
+            <p style={{ fontSize: '0.9rem', margin: 0, color: 'var(--text-muted)', lineHeight: 1.45 }}>{b.service_description}</p>
+          </div>
+
+          <div>
+            <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', fontWeight: 700, marginBottom: 4 }}>Location Address</p>
+            <p style={{ fontSize: '0.9rem', margin: 0, color: 'var(--text-muted)', lineHeight: 1.45 }}>{b.service_address}</p>
+          </div>
+
+          <div>
+            <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', fontWeight: 700, marginBottom: 4 }}>Preferred Date & Price</p>
+            <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-muted)' }}>
+              <FaCalendarAlt style={{ marginRight: 6, color: 'var(--accent)' }} />
+              {b.preferred_date ? new Date(b.preferred_date).toLocaleString() : 'Not specified'}
+            </p>
+            <p style={{ fontSize: '1.35rem', fontWeight: 800, margin: '6px 0 0 0', color: 'var(--accent)' }}>
+              {b.estimated_price ? `₹${b.estimated_price}` : 'Quote Pending'}
+            </p>
+          </div>
         </div>
 
-        <div>
-          <p style={{ fontSize: 12, margin: '0 0 2px 0', color: 'var(--text-main)' }}><strong>Schedule & Estimated Price:</strong></p>
-          <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
-            <FaCalendarAlt style={{ marginRight: 4 }} />
-            {b.preferred_date ? new Date(b.preferred_date).toLocaleString() : 'Not specified'}
-          </p>
-          <p style={{ fontSize: 15, fontWeight: 800, margin: '4px 0 0 0', color: 'var(--primary)' }}>
-            {b.estimated_price ? `₹${b.estimated_price}` : 'Quote Pending'}
-          </p>
+        <div style={{ display: 'flex', gap: 12, marginTop: 20, borderTop: '1px dashed var(--glass-border)', paddingTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          {getStatusActions(b)}
+          
+          <GlassButton
+            onClick={() => navigate(`/chat/${b.id}`)}
+            variant="outline"
+            style={{ padding: '8px 16px', fontSize: 13 }}
+          >
+            <FaComments /> Chat Customer
+          </GlassButton>
         </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, marginTop: 16, borderTop: '1px dashed var(--border-color)', paddingTop: 14, flexWrap: 'wrap' }}>
-        {getStatusActions(b)}
-        
-        <button
-          onClick={() => {
-            // Navigates to real-time chat page powered by Socket.IO ChatContext
-            navigate(`/chat/${b.id}`);
-          }}
-          className="btn-outline"
-          style={{ padding: '8px 16px', fontSize: 13 }}
-        >
-          <FaComments /> Chat Customer
-        </button>
-      </div>
-    </article>
+      </GlassCard>
+    </motion.div>
   );
 };
 

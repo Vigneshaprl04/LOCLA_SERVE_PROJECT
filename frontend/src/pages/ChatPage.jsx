@@ -4,7 +4,14 @@ import { FaArrowLeft, FaPaperPlane, FaComments, FaCheckDouble, FaLink } from 're
 import { useAuth } from '../AuthContext';
 import { useChat } from '../hooks/useChat';
 import api from '../api';
+import Loader from '../components/ui/Loader';
+import GlassButton from '../components/ui/GlassButton';
+import { motion } from 'framer-motion';
 
+/**
+ * Redesigned Premium Chat / Messenger screen.
+ * Integrates real-time Socket.IO chat rooms, receipts, and user indicators.
+ */
 const ChatPage = () => {
   const { bookingId } = useParams();
   const { user, socket } = useAuth();
@@ -109,9 +116,8 @@ const ChatPage = () => {
 
   if (loading && !bookingDetails) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: 12, color: 'var(--text-muted)' }}>
-        <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
-        <p>Loading chat history...</p>
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader text="Opening chat messenger..." />
       </div>
     );
   }
@@ -122,18 +128,28 @@ const ChatPage = () => {
       : bookingDetails?.provider_name || 'Provider';
 
   return (
-    <div style={{ maxWidth: '900px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}>
+    <motion.div 
+      style={{ maxWidth: '900px', margin: '24px auto', padding: '0 24px', boxSizing: 'border-box' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       
-      <div className="chat-container animate-fade-up">
+      <div className="chat-container">
         
         {/* Chat header */}
         <header className="chat-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={handleBack} className="btn-outline" style={{ padding: 8, border: 'none', background: 'transparent', outline: 'none' }} title="Back">
+            <GlassButton 
+              onClick={handleBack} 
+              variant="outline" 
+              style={{ padding: 8, border: 'none', background: 'transparent' }} 
+              title="Back"
+            >
               <FaArrowLeft size={16} />
-            </button>
+            </GlassButton>
             <div style={{ textAlign: 'left' }}>
-              <h2 className="chat-header-title" style={{ margin: 0 }}>{opposingPartyName}</h2>
+              <h2 className="chat-header-title" style={{ margin: 0, color: 'var(--text-main)', background: 'none', WebkitTextFillColor: 'initial' }}>{opposingPartyName}</h2>
               {bookingDetails && (
                 <p style={{ fontSize: 11, margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
                   Booking #{bookingId} &bull; {bookingDetails.category_name}
@@ -142,19 +158,19 @@ const ChatPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 650 }}>
             <span className={`chat-status-indicator ${socketConnected ? 'online' : 'offline'}`} />
             <span style={{ color: socketConnected ? 'var(--success)' : 'var(--text-muted)' }}>
-              {socketConnected ? 'Live Connection' : 'Offline'}
+              {socketConnected ? 'Live Connection' : 'Disconnected'}
             </span>
           </div>
         </header>
 
         {/* Booking Context Banner */}
         {bookingDetails && (
-          <div style={{ padding: '8px 24px', backgroundColor: 'var(--bg-app)', borderBottom: '1px solid var(--border-color)', fontSize: '0.775rem', textAlign: 'left', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <FaLink style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            <strong>Context Description:</strong> {bookingDetails.service_description}
+          <div style={{ padding: '10px 24px', backgroundColor: 'rgba(5, 5, 10, 0.4)', borderBottom: '1px solid var(--glass-border)', fontSize: '0.8rem', textAlign: 'left', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            <FaLink style={{ marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)' }} />
+            <strong>Requirement Context:</strong> {bookingDetails.service_description}
           </div>
         )}
 
@@ -167,8 +183,8 @@ const ChatPage = () => {
         {/* Messages list */}
         <div className="chat-messages">
           {messages.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: 40, color: 'var(--text-muted)', textAlign: 'center' }}>
-              <FaComments size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: 40, color: 'var(--text-light)', textAlign: 'center' }}>
+              <FaComments size={36} style={{ marginBottom: 12, opacity: 0.5, color: 'var(--accent)' }} />
               <p style={{ margin: 0, fontSize: 14 }}>No messages exchanged yet. Type below to open conversation.</p>
             </div>
           ) : (
@@ -178,11 +194,11 @@ const ChatPage = () => {
                 <div key={msg.id || index} className={`chat-message-row ${isMe ? 'sent' : 'received'}`}>
                   <div className="chat-bubble animate-scale">
                     {!isMe && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', marginBottom: 2, display: 'block' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', marginBottom: 4, display: 'block' }}>
                         {opposingPartyName}
                       </span>
                     )}
-                    <p style={{ margin: 0, fontSize: '0.925rem', wordBreak: 'break-word' }}>
+                    <p style={{ margin: 0, fontSize: '0.95rem', wordBreak: 'break-word' }}>
                       {msg.message}
                     </p>
                     
@@ -192,7 +208,7 @@ const ChatPage = () => {
                       </span>
                       {isMe && (
                         <span>
-                          <FaCheckDouble size={10} style={{ color: msg.is_read ? 'var(--accent)' : 'rgba(255, 255, 255, 0.4)' }} />
+                          <FaCheckDouble size={10} style={{ color: msg.is_read ? 'var(--accent)' : 'rgba(255, 255, 255, 0.45)' }} />
                         </span>
                       )}
                     </div>
@@ -210,24 +226,24 @@ const ChatPage = () => {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Write a message..."
+            placeholder="Write a secure message..."
             className="form-control"
             maxLength={1000}
             disabled={!socketConnected}
             style={{ borderRadius: 'var(--radius-full)' }}
           />
-          <button
+          <GlassButton
             type="submit"
             disabled={!inputText.trim() || !socketConnected}
-            className="btn-primary"
-            style={{ width: 42, height: 42, borderRadius: '50%', padding: 0, flexShrink: 0 }}
+            variant="primary"
+            style={{ width: 44, height: 44, borderRadius: '50%', padding: 0, flexShrink: 0 }}
           >
             <FaPaperPlane size={13} />
-          </button>
+          </GlassButton>
         </form>
 
       </div>
-    </div>
+    </motion.div>
   );
 };
 
