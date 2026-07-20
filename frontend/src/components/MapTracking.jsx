@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useAuth } from '../AuthContext';
 import Loader from './ui/Loader';
 import GlassCard from './ui/GlassCard';
 import { FaLocationArrow, FaPlus, FaMinus, FaCompass, FaExclamationTriangle } from 'react-icons/fa';
@@ -6,18 +7,22 @@ import { FaLocationArrow, FaPlus, FaMinus, FaCompass, FaExclamationTriangle } fr
 /**
  * Premium, native Google Maps tracking component.
  * Avoids React 19 package peer-dependency issues by loading script directly.
- * Handles permissions, centring, zoom, and contains placeholders for provider updates.
+ * Handles permissions, customer & provider markers, recentring, zoom, and live socket streams.
  */
 const MapTracking = ({
   bookingId,
-  providerCoords = null,
   bookingStatus = '',
   onLocationDetected = null
 }) => {
+  const { socket } = useAuth();
+  
   const mapRef = useRef(null);
   const [mapInstance, setMapInstance] = useState(null);
   const [customerMarker, setCustomerMarker] = useState(null);
+  
+  // Track provider marker and coords in state
   const [providerMarker, setProviderMarker] = useState(null);
+  const [liveProviderCoords, setLiveProviderCoords] = useState(null);
 
   // States
   const [customerLocation, setCustomerLocation] = useState(null);
@@ -31,10 +36,19 @@ const MapTracking = ({
   // Centering helper
   const handleRecenter = useCallback(() => {
     if (mapInstance && customerLocation) {
-      mapInstance.panTo(customerLocation);
-      mapInstance.setZoom(15);
+      if (liveProviderCoords) {
+        // Fit both markers in bounds
+        const bounds = new window.google.maps.LatLngBounds();
+        bounds.extend(customerLocation);
+        bounds.extend(liveProviderCoords);
+        mapInstance.fitBounds(bounds);
+      } else {
+        // Just center on customer
+        mapInstance.panTo(customerLocation);
+        mapInstance.setZoom(15);
+      }
     }
-  }, [mapInstance, customerLocation]);
+  }, [mapInstance, customerLocation, liveProviderCoords]);
 
   // Zoom helpers
   const handleZoomIn = () => {
@@ -49,7 +63,7 @@ const MapTracking = ({
     }
   };
 
-  // 1. Geolocation detection helper
+  // Geolocation detection helper (Customer)
   const detectLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setPermissionState('unsupported');
@@ -87,12 +101,39 @@ const MapTracking = ({
     );
   }, [onLocationDetected]);
 
-  // 2. Load Google Maps Script
+  // 1. Detect location on mount
   useEffect(() => {
-    // Detect location on mount
     detectLocation();
   }, [detectLocation]);
 
+  // 2. Listen to provider location updates via Socket.IO
+  useEffect(() => {
+    if (!socket || !bookingId) return;
+
+    // Start tracking sub
+    socket.emit("customer:tracking:start", { bookingId });
+    console.log(`[Socket] Sent customer:tracking:start for booking ${bookingId}`);
+
+    const handleTrackingUpdate = (data) => {
+      if (Number(data.bookingId) === Number(bookingId)) {
+        console.log(`[Socket] Received tracking update for booking ${bookingId}: lat=${data.latitude}, lng=${data.longitude}`);
+        setLiveProviderCoords({
+          lat: Number(data.latitude),
+          lng: Number(data.longitude)
+        });
+      }
+    };
+
+    socket.on("booking:tracking:update", handleTrackingUpdate);
+
+    return () => {
+      socket.emit("customer:tracking:stop", { bookingId });
+      socket.off("booking:tracking:update", handleTrackingUpdate);
+      console.log(`[Socket] Cleaned up tracking for booking ${bookingId}`);
+    };
+  }, [socket, bookingId]);
+
+  // 3. Load Google Maps Script
   useEffect(() => {
     if (permissionState !== 'granted' || !customerLocation) return;
 
@@ -149,7 +190,6 @@ const MapTracking = ({
     if (window.google && window.google.maps) {
       initializeMap();
     } else {
-      // Check if tag already exists in index.html
       let script = document.getElementById(scriptId);
       if (!script) {
         script = document.createElement('script');
@@ -168,6 +208,38 @@ const MapTracking = ({
     };
   }, [permissionState, customerLocation, apiKey]);
 
+  // 4. Update or render Provider Marker
+  useEffect(() => {
+    if (!mapInstance || !liveProviderCoords || !window.google) return;
+
+    if (providerMarker) {
+      // Move existing marker smoothly
+      providerMarker.setPosition(liveProviderCoords);
+    } else {
+      // Create new provider marker (red neon arrow)
+      const marker = new window.google.maps.Marker({
+        position: liveProviderCoords,
+        map: mapInstance,
+        title: 'Service Partner',
+        icon: {
+          path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 6,
+          fillColor: '#ef4444',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        }
+      });
+      setProviderMarker(marker);
+
+      // Auto-fit bounds on first load
+      const bounds = new window.google.maps.LatLngBounds();
+      bounds.extend(customerLocation);
+      bounds.extend(liveProviderCoords);
+      mapInstance.fitBounds(bounds);
+    }
+  }, [mapInstance, liveProviderCoords, customerLocation, providerMarker]);
+
   // Clean up markers on unmount
   useEffect(() => {
     return () => {
@@ -176,7 +248,7 @@ const MapTracking = ({
     };
   }, [customerMarker, providerMarker]);
 
-  // 3. Render maps or fallback blocks
+  // 5. Render Map canvas or fallbacks
   if (loading) {
     return (
       <div style={{ display: 'flex', minHeight: '300px', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
@@ -214,7 +286,7 @@ const MapTracking = ({
         <button
           onClick={handleRecenter}
           style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-full)', background: 'rgba(10, 15, 30, 0.85)', border: '1px solid var(--glass-border)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all var(--transition-fast)' }}
-          title="Recenter on Me"
+          title="Recenter Map Bounds"
           aria-label="Recenter Map"
         >
           <FaLocationArrow size={12} />
@@ -237,11 +309,19 @@ const MapTracking = ({
         </button>
       </div>
 
-      {/* Compass Compass indicator bottom right */}
+      {/* Compass indicator bottom right */}
       <div style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 10 }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(10,15,30,0.85)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
           <FaCompass size={14} style={{ transform: 'rotate(0deg)' }} />
         </div>
+      </div>
+
+      {/* Live status bar details overlay */}
+      <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, background: 'rgba(10, 15, 30, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: liveProviderCoords ? 'var(--success)' : 'var(--warning)', display: 'inline-block', boxShadow: liveProviderCoords ? '0 0 8px var(--success-glow)' : 'none' }}></span>
+        <span style={{ color: '#ffffff', fontSize: '0.78rem', fontWeight: 600 }}>
+          {liveProviderCoords ? 'Partner Live Tracking Active' : 'Waiting for partner location...'}
+        </span>
       </div>
     </div>
   );
