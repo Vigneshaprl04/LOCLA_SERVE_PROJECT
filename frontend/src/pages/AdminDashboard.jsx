@@ -77,6 +77,30 @@ const AdminDashboard = () => {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState('');
 
+  // Analytics V8 states
+  const [analyticsData, setAnalyticsData] = useState({
+    totals: {
+      totalBookings: 0,
+      completedBookings: 0,
+      cancelledBookings: 0,
+      cancellationRate: 0,
+      totalUsers: 0,
+      totalProviders: 0,
+      totalComplaints: 0,
+      resolvedComplaints: 0,
+      grossRevenue: 0,
+      paymentSuccessRate: 100
+    },
+    charts: {
+      weekly: [],
+      monthly: [],
+      yearly: []
+    }
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState('');
+  const [chartRange, setChartRange] = useState('weekly');
+
   // Recent Operations (Current Session) State
   const [recentOperations, setRecentOperations] = useState([]);
 
@@ -219,6 +243,60 @@ const AdminDashboard = () => {
     }
   }, [createAbortSignal]);
 
+  // Fetch Analytics V8 Overview Metrics
+  const fetchAnalyticsData = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsError('');
+      const signal = createAbortSignal();
+      const response = await api.get('/admin/analytics/overview', { signal });
+      if (response.data.success) {
+        setAnalyticsData(response.data.data);
+      }
+    } catch (err) {
+      if (err.name === 'CanceledError') return;
+      setAnalyticsError(err.response?.data?.message || 'Unable to compile analytics records');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [createAbortSignal]);
+
+  const handleExportAnalyticsCSV = async () => {
+    try {
+      logOperation("Initiated CSV report download", "Export");
+      const res = await api.get('/admin/analytics/export/csv', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'localserve_analytics_report.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      logOperation("CSV report downloaded successfully", "Export");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download CSV report.");
+    }
+  };
+
+  const handleExportAnalyticsPDF = async () => {
+    try {
+      logOperation("Initiated PDF report download", "Export");
+      const res = await api.get('/admin/analytics/export/pdf', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'localserve_analytics_report.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      logOperation("PDF report downloaded successfully", "Export");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download PDF report.");
+    }
+  };
+
   // Aggregate Initial Data Load
   const fetchAllData = useCallback(() => {
     fetchPendingProviders();
@@ -226,7 +304,8 @@ const AdminDashboard = () => {
     fetchPayments();
     fetchComplaints();
     fetchAiInsights();
-  }, [fetchPendingProviders, fetchFinancialStats, fetchPayments, fetchComplaints, fetchAiInsights]);
+    fetchAnalyticsData();
+  }, [fetchPendingProviders, fetchFinancialStats, fetchPayments, fetchComplaints, fetchAiInsights, fetchAnalyticsData]);
 
   useEffect(() => {
     fetchAllData();
@@ -343,33 +422,31 @@ const AdminDashboard = () => {
   const totalPaymentPages = Math.ceil(filteredPayments.length / paymentsPerPage);
 
   // SVG Chart rendering data prep (Safe from crashing)
+  const activeChartData = useMemo(() => {
+    return analyticsData.charts[chartRange] || [];
+  }, [analyticsData, chartRange]);
+
   const chartPoints = useMemo(() => {
-    const values = [
-      revenueStats.todayRevenue || 0,
-      revenueStats.weeklyRevenue || 0,
-      revenueStats.monthlyRevenue || 0,
-      revenueStats.totalRevenue || 0
-    ];
+    const data = activeChartData;
+    if (data.length === 0) return [];
+
+    const values = data.map(d => Number(d.revenue || 0));
     const maxVal = Math.max(...values, 100);
-    
-    // Calculate coordinates on a viewBox of 500x150
+
     const padding = 30;
     const chartHeight = 150 - padding * 2;
     const chartWidth = 500 - padding * 2;
 
-    return values.map((val, index) => {
-      const x = padding + (index * (chartWidth / (values.length - 1)));
-      const y = 150 - padding - ((val / maxVal) * chartHeight);
-      return { x, y, value: val, label: ['Today', 'Weekly', 'Monthly', 'Cumulative'][index] };
+    return data.map((d, index) => {
+      const x = padding + (index * (chartWidth / (data.length - 1 || 1)));
+      const y = 150 - padding - (((d.revenue || 0) / maxVal) * chartHeight);
+      return { x, y, value: d.revenue || 0, label: d.name };
     });
-  }, [revenueStats]);
+  }, [activeChartData]);
 
   const isChartDataAvailable = useMemo(() => {
-    return revenueStats.todayRevenue > 0 || 
-           revenueStats.weeklyRevenue > 0 || 
-           revenueStats.monthlyRevenue > 0 || 
-           revenueStats.totalRevenue > 0;
-  }, [revenueStats]);
+    return activeChartData.some(d => Number(d.revenue) > 0 || Number(d.bookings) > 0);
+  }, [activeChartData]);
 
   // Common Contextual Empty State Component
   const ContextualEmptyState = ({ title }) => (
@@ -718,32 +795,32 @@ const AdminDashboard = () => {
               </GlassCard>
 
               {/* Financial KPI stats grid */}
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-main)' }}>Financial Performance</h2>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '20px', color: 'var(--text-main)' }}>Platform Enterprise Analytics Overview</h2>
               
-              {statsLoading ? (
+              {analyticsLoading ? (
                 <div style={{ padding: '24px 0' }}><Loader text="Updating analytics metrics..." /></div>
-              ) : statsError ? (
+              ) : analyticsError ? (
                 <div style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 'var(--radius-lg)', color: '#fca5a5', marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{statsError}</span>
-                  <GlassButton onClick={fetchFinancialStats} style={{ padding: '8px 16px', fontSize: '0.8rem' }}>Retry Load</GlassButton>
+                  <span>{analyticsError}</span>
+                  <GlassButton onClick={fetchAnalyticsData} style={{ padding: '8px 16px', fontSize: '0.8rem' }}>Retry Load</GlassButton>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Today's Revenue</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--success)', margin: '8px 0 0 0' }}>₹{(revenueStats.todayRevenue || 0).toFixed(2)}</h3>
-                  </GlassCard>
-                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Weekly Revenue</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary-light)', margin: '8px 0 0 0' }}>₹{(revenueStats.weeklyRevenue || 0).toFixed(2)}</h3>
-                  </GlassCard>
-                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Monthly Revenue</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent)', margin: '8px 0 0 0' }}>₹{(revenueStats.monthlyRevenue || 0).toFixed(2)}</h3>
-                  </GlassCard>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                   <GlassCard hoverLift={false} style={{ padding: '24px' }}>
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Gross Revenue</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)', margin: '8px 0 0 0' }}>₹{(revenueStats.totalRevenue || 0).toFixed(2)}</h3>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--success)', margin: '8px 0 0 0' }}>₹{(analyticsData.totals.grossRevenue || 0).toFixed(2)}</h3>
+                  </GlassCard>
+                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Bookings</span>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary-light)', margin: '8px 0 0 0' }}>{analyticsData.totals.totalBookings || 0}</h3>
+                  </GlassCard>
+                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Cancellation Rate</span>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--error)', margin: '8px 0 0 0' }}>{analyticsData.totals.cancellationRate || 0}%</h3>
+                  </GlassCard>
+                  <GlassCard hoverLift={false} style={{ padding: '24px' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Payment Success Rate</span>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent)', margin: '8px 0 0 0' }}>{analyticsData.totals.paymentSuccessRate || 100}%</h3>
                   </GlassCard>
                 </div>
               )}
@@ -753,7 +830,30 @@ const AdminDashboard = () => {
                 
                 {/* SVG Revenue Chart */}
                 <GlassCard hoverLift={false} style={{ padding: '28px' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '24px', color: 'var(--text-main)' }}>Revenue Growth Curves</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: 12 }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>Revenue Growth Curves</h3>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {['weekly', 'monthly', 'yearly'].map(range => (
+                        <button
+                          key={range}
+                          onClick={() => setChartRange(range)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--glass-border)',
+                            background: chartRange === range ? 'var(--primary)' : 'rgba(255,255,255,0.02)',
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {range}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   
                   {!isChartDataAvailable ? (
                     <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--glass-border)', borderRadius: 'var(--radius-md)', color: 'var(--text-light)', fontSize: '0.9rem' }}>
@@ -810,16 +910,16 @@ const AdminDashboard = () => {
 
                   {/* Transaction Outcome Distribution */}
                   <div style={{ marginTop: '24px', display: 'flex', gap: '16px', flexDirection: 'column' }}>
-                    <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)' }}>Outcome Success Ratios</h4>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)' }}>Platform Service Outcome Ratios</h4>
                     <div style={{ height: '24px', display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                       {[
-                        { label: 'Completed', val: revenueStats.completedPayments, color: 'var(--success)' },
-                        { label: 'Pending', val: revenueStats.pendingPayments, color: 'var(--warning)' },
-                        { label: 'Failed', val: revenueStats.failedPayments, color: 'var(--error)' }
+                        { label: 'Completed', val: analyticsData.totals.completedBookings, color: 'var(--success)' },
+                        { label: 'Cancelled', val: analyticsData.totals.cancelledBookings, color: 'var(--error)' },
+                        { label: 'Pending/Active', val: (analyticsData.totals.totalBookings - analyticsData.totals.completedBookings - analyticsData.totals.cancelledBookings), color: 'var(--warning)' }
                       ].map((item, idx) => {
-                        const total = (revenueStats.completedPayments || 0) + (revenueStats.pendingPayments || 0) + (revenueStats.failedPayments || 0) || 1;
+                        const total = analyticsData.totals.totalBookings || 1;
                         const pct = (item.val / total) * 100;
-                        if (pct === 0) return null;
+                        if (pct <= 0) return null;
                         return (
                           <div 
                             key={idx} 
@@ -830,10 +930,24 @@ const AdminDashboard = () => {
                       })}
                     </div>
                     <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', flexWrap: 'wrap' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} /> Completed ({revenueStats.completedPayments || 0})</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} /> Pending ({revenueStats.pendingPayments || 0})</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error)' }} /> Failed ({revenueStats.failedPayments || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} /> Completed ({analyticsData.totals.completedBookings || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error)' }} /> Cancelled ({analyticsData.totals.cancelledBookings || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} /> Active/Other ({analyticsData.totals.totalBookings - analyticsData.totals.completedBookings - analyticsData.totals.cancelledBookings || 0})</span>
                     </div>
+                  </div>
+                </GlassCard>
+
+                {/* Analytics Export Center Card */}
+                <GlassCard hoverLift={false} style={{ padding: '28px', marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: '0 0 6px 0', color: 'var(--text-main)' }}>Analytics Export Center</h3>
+                  <p style={{ margin: '0 0 20px 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Generate and download raw database summaries or official PDF executive performance reports.</p>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <GlassButton onClick={handleExportAnalyticsCSV} variant="primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}>
+                      <FaDownload size={12} /> Export CSV
+                    </GlassButton>
+                    <GlassButton onClick={handleExportAnalyticsPDF} variant="outline" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}>
+                      <FaDownload size={12} /> Export PDF
+                    </GlassButton>
                   </div>
                 </GlassCard>
 

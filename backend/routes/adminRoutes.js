@@ -6,6 +6,12 @@ const {
 } = require("../controllers/adminController");
 
 const {
+  getAnalyticsOverview,
+  exportAnalyticsCSV,
+  exportAnalyticsPDF
+} = require("../controllers/analyticsController");
+
+const {
   protect,
   authorize
 } = require("../middleware/authMiddleware");
@@ -24,6 +30,27 @@ router.patch(
   protect,
   authorize("admin"),
   updateProviderVerification
+);
+
+router.get(
+  "/analytics/overview",
+  protect,
+  authorize("admin"),
+  getAnalyticsOverview
+);
+
+router.get(
+  "/analytics/export/csv",
+  protect,
+  authorize("admin"),
+  exportAnalyticsCSV
+);
+
+router.get(
+  "/analytics/export/pdf",
+  protect,
+  authorize("admin"),
+  exportAnalyticsPDF
 );
 
 module.exports = router;
