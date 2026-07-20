@@ -1116,7 +1116,7 @@ const AdminDashboard = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
                         <div>
                           <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>Complaint Ticket #{c.id}</h3>
-                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Created by Customer: <strong>{c.user_name || `User ID: ${c.user_id}`}</strong> &bull; Date: {new Date(c.created_at).toLocaleDateString()}</span>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Created by Customer: <strong>{c.customer_name || c.user_name || `User ID: ${c.user_id}`}</strong> &bull; Date: {new Date(c.created_at).toLocaleDateString()}</span>
                         </div>
                         <span style={{ 
                           padding: '4px 8px', 
