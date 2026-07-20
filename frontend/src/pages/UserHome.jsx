@@ -29,7 +29,7 @@ function UserHome() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const searchNearby = useCallback(async (coords = location) => {
+  const searchNearby = useCallback(async (coords) => {
     if (!coords) {
       setMessage("Get your location first");
       return;
@@ -65,7 +65,7 @@ function UserHome() {
     } finally {
       setLoading(false);
     }
-  }, [location, radius, categoryId]);
+  }, [radius, categoryId]);
 
   const getLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -85,7 +85,6 @@ function UserHome() {
 
         setLocation(coords);
         setMessage("");
-        searchNearby(coords);
       },
       () => {
         setLoading(false);
@@ -96,7 +95,7 @@ function UserHome() {
         timeout: 10000,
       }
     );
-  }, [searchNearby]);
+  }, []);
 
   useEffect(() => {
     const fetchCats = async () => {
@@ -126,13 +125,13 @@ function UserHome() {
     };
     fetchCats();
     getLocation();
-  }, [getLocation]);
+  }, []);
 
   useEffect(() => {
     if (location) {
       searchNearby(location);
     }
-  }, [categoryId, radius, location, searchNearby]);
+  }, [location, searchNearby]);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', boxSizing: 'border-box' }}>
