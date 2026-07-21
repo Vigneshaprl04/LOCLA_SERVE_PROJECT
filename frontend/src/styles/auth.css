@@ -2,17 +2,44 @@
    LocalServe Redesign – Pixar / Disney Cartoon 3D City Layout
    ============================================================ */
 
-/* Main Container: Cartoon Smart City sunrise canvas */
-.cartoon-city-container {
+/* Main Container: Full-screen background image illustration */
+.cartoon-bg-login-container {
   position: relative;
   min-height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: linear-gradient(to bottom, #7dd3fc 0%, #bae6fd 45%, #ffd6a5 75%, #fef08a 100%);
   font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Soft dark overlay (20-30%) to enhance contrast and text readability */
+.dark-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.24);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Centered card wrapper positioning above the overlay */
+.centered-card-wrapper {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 /* Sky layers & Pixar assets styling */
