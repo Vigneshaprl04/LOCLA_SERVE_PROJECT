@@ -29,7 +29,7 @@ exports.getAnalyticsOverview = async (req, res) => {
     const [[complaintCounts]] = await db.query(
       `SELECT 
          COUNT(*) as totalComplaints,
-         SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolvedComplaints
+         SUM(CASE WHEN complaint_status = 'resolved' THEN 1 ELSE 0 END) as resolvedComplaints
        FROM complaints`
     );
 

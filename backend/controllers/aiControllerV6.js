@@ -244,11 +244,11 @@ exports.getAdminInsights = async (req, res) => {
     );
 
     const [disputes] = await db.query(
-      "SELECT COUNT(*) AS openDisputes FROM complaints WHERE status != 'resolved'"
+      "SELECT COUNT(*) AS openDisputes FROM complaints WHERE complaint_status != 'resolved'"
     );
 
     const [revenue] = await db.query(
-      "SELECT SUM(amount) AS totalGross FROM payments WHERE status = 'paid'"
+      "SELECT SUM(total_amount) AS totalGross FROM payments WHERE payment_status = 'paid'"
     );
 
     const metrics = {
