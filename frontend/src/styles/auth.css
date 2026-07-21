@@ -331,6 +331,11 @@
   width: 100%;
   display: flex;
   align-items: center;
+  transition: transform 0.2s ease-in-out;
+}
+
+.pill-input-wrapper.field-active .pill-input-inner {
+  transform: translateY(-2px);
 }
 
 .pill-icon {
@@ -340,6 +345,11 @@
   font-size: 0.95rem;
   display: flex;
   align-items: center;
+  transition: transform 0.2s ease-in-out;
+}
+
+.pill-input-wrapper.field-active .pill-icon {
+  transform: scale(1.2) rotate(-10deg);
 }
 
 .pill-control {
@@ -555,13 +565,16 @@
   filter: drop-shadow(0 0 8px var(--accent-glow));
 }
 
-/* High-contrast, clean, white colors for maximum visibility */
+/* High-contrast, clean, bright gradient colors for maximum visibility in all themes */
 .auth-branding-title {
   font-size: 2.75rem;
   font-weight: 900;
   line-height: 1.15;
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(135deg, #ffffff 0%, #c084fc 60%, #60a5fa 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
   margin-bottom: 20px;
   letter-spacing: -0.04em;
   text-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
