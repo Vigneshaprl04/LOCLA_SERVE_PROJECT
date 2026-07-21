@@ -316,14 +316,17 @@
 .premium-title {
   font-size: 1.8rem;
   font-weight: 900;
-  color: #1e1b4b;
+  color: #312e81 !important;
+  background: none !important;
+  -webkit-text-fill-color: #312e81 !important;
+  background-clip: border-box !important;
   margin: 0 0 8px 0;
   letter-spacing: -0.03em;
 }
 
 .premium-subtitle {
   font-size: 0.9rem;
-  color: #4b5563;
+  color: #374151 !important;
   margin: 0;
   line-height: 1.4;
 }
