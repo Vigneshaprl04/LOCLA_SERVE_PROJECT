@@ -250,8 +250,11 @@ const AdminDashboard = () => {
       setAnalyticsError('');
       const signal = createAbortSignal();
       const response = await api.get('/admin/analytics/overview', { signal });
-      if (response.data.success) {
-        setAnalyticsData(response.data.data);
+      if (response.data.success && response.data.data) {
+        setAnalyticsData(prev => ({
+          totals: { ...prev.totals, ...response.data.data.totals },
+          charts: { ...prev.charts, ...response.data.data.charts }
+        }));
       }
     } catch (err) {
       if (err.name === 'CanceledError') return;
@@ -423,7 +426,7 @@ const AdminDashboard = () => {
 
   // SVG Chart rendering data prep (Safe from crashing)
   const activeChartData = useMemo(() => {
-    return analyticsData.charts[chartRange] || [];
+    return analyticsData?.charts?.[chartRange] || [];
   }, [analyticsData, chartRange]);
 
   const chartPoints = useMemo(() => {
@@ -808,19 +811,19 @@ const AdminDashboard = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                   <GlassCard hoverLift={false} style={{ padding: '24px' }}>
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Gross Revenue</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--success)', margin: '8px 0 0 0' }}>₹{(analyticsData.totals.grossRevenue || 0).toFixed(2)}</h3>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--success)', margin: '8px 0 0 0' }}>₹{(analyticsData?.totals?.grossRevenue || 0).toFixed(2)}</h3>
                   </GlassCard>
                   <GlassCard hoverLift={false} style={{ padding: '24px' }}>
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Bookings</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary-light)', margin: '8px 0 0 0' }}>{analyticsData.totals.totalBookings || 0}</h3>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--primary-light)', margin: '8px 0 0 0' }}>{analyticsData?.totals?.totalBookings || 0}</h3>
                   </GlassCard>
                   <GlassCard hoverLift={false} style={{ padding: '24px' }}>
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Cancellation Rate</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--error)', margin: '8px 0 0 0' }}>{analyticsData.totals.cancellationRate || 0}%</h3>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--error)', margin: '8px 0 0 0' }}>{analyticsData?.totals?.cancellationRate || 0}%</h3>
                   </GlassCard>
                   <GlassCard hoverLift={false} style={{ padding: '24px' }}>
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>Payment Success Rate</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent)', margin: '8px 0 0 0' }}>{analyticsData.totals.paymentSuccessRate || 100}%</h3>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent)', margin: '8px 0 0 0' }}>{analyticsData?.totals?.paymentSuccessRate || 100}%</h3>
                   </GlassCard>
                 </div>
               )}
@@ -913,11 +916,11 @@ const AdminDashboard = () => {
                     <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)' }}>Platform Service Outcome Ratios</h4>
                     <div style={{ height: '24px', display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                       {[
-                        { label: 'Completed', val: analyticsData.totals.completedBookings, color: 'var(--success)' },
-                        { label: 'Cancelled', val: analyticsData.totals.cancelledBookings, color: 'var(--error)' },
-                        { label: 'Pending/Active', val: (analyticsData.totals.totalBookings - analyticsData.totals.completedBookings - analyticsData.totals.cancelledBookings), color: 'var(--warning)' }
+                        { label: 'Completed', val: analyticsData?.totals?.completedBookings || 0, color: 'var(--success)' },
+                        { label: 'Cancelled', val: analyticsData?.totals?.cancelledBookings || 0, color: 'var(--error)' },
+                        { label: 'Pending/Active', val: ((analyticsData?.totals?.totalBookings || 0) - (analyticsData?.totals?.completedBookings || 0) - (analyticsData?.totals?.cancelledBookings || 0)), color: 'var(--warning)' }
                       ].map((item, idx) => {
-                        const total = analyticsData.totals.totalBookings || 1;
+                        const total = analyticsData?.totals?.totalBookings || 1;
                         const pct = (item.val / total) * 100;
                         if (pct <= 0) return null;
                         return (
@@ -930,9 +933,9 @@ const AdminDashboard = () => {
                       })}
                     </div>
                     <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', flexWrap: 'wrap' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} /> Completed ({analyticsData.totals.completedBookings || 0})</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error)' }} /> Cancelled ({analyticsData.totals.cancelledBookings || 0})</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} /> Active/Other ({analyticsData.totals.totalBookings - analyticsData.totals.completedBookings - analyticsData.totals.cancelledBookings || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} /> Completed ({analyticsData?.totals?.completedBookings || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--error)' }} /> Cancelled ({analyticsData?.totals?.cancelledBookings || 0})</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} /> Active/Other ({((analyticsData?.totals?.totalBookings || 0) - (analyticsData?.totals?.completedBookings || 0) - (analyticsData?.totals?.cancelledBookings || 0)) || 0})</span>
                     </div>
                   </div>
                 </GlassCard>
